@@ -1,0 +1,54 @@
+# ==========================================
+# Environment & Secrets
+# ==========================================
+.env
+.env.*
+!.env.example
+
+.venv/
+venv/
+env/
+
+# ==========================================
+# Python & Packaging Artifacts
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Build and distribution
+build/
+dist/
+wheels/
+*.egg-info/
+*.egg
+
+# ==========================================
+# Testing & Tooling Caches
+# ==========================================
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+
+# ==========================================
+# IDE & Editors
+# ==========================================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ==========================================
+# OS Generated Files
+# ==========================================
+.DS_Store
+Thumbs.db
+
+# ==========================================
+# Assets & Fonts
+# ==========================================
+assets/fonts/*.ttf
+assets/fonts/*.otf
+
+!assets/fonts/.gitkeep

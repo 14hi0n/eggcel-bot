@@ -1,0 +1,36 @@
+[project]
+name = "test-tg-bot"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = []
+requires-python = ">=3.14"
+dependencies = [
+    "google-genai>=2.17.0",
+    "pillow>=12.3.0",
+    "python-dotenv>=1.2.2",
+    "python-telegram-bot>=22.8",
+]
+
+[tool.uv]
+package = false
+
+[dependency-groups]
+dev = [
+    "ruff>=0.16.2",
+]
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+    "E",   # Ошибки стиля (pycodestyle)
+    "W",   # Предупреждения (pycodestyle)
+    "F",   # Логические ошибки (Pyflakes)
+    "I",   # Сортировка импортов (isort)
+    "B",   # Частые баги (flake8-bugbear)
+]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
