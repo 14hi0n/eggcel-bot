@@ -14,3 +14,4 @@ class Config:
     ALLOWED_CHAT_IDS: list[int] = list(
         map(int, os.getenv("ALLOWED_CHAT_IDS", "").split(","))
     )
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///database.db")

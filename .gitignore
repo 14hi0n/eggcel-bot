@@ -50,5 +50,5 @@ Thumbs.db
 # ==========================================
 assets/fonts/*.ttf
 assets/fonts/*.otf
-
+*.db
 !assets/fonts/.gitkeep

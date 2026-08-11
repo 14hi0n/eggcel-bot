@@ -8,6 +8,8 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from config import Config
+from database.manager import DatabaseManager
+from database.repositories.chat import ChatRepository, ChatStatus
 from services.meme_renderer import compress_for_telegram, render_meme_text
 from services.text_generator import generate_meme_caption
 
@@ -59,17 +61,17 @@ async def handle_public_photo(
         return
 
     if random.random() >= Config.MEME_PROBABILITY:
-        logger.info("Skipping photo message from user %s", update.message.from_user.id)
+        logger.debug("Skipping photo message from user %s", update.message.from_user.id)
         return
 
-    if (
-        Config.ALLOWED_CHAT_IDS
-        and update.message.chat_id not in Config.ALLOWED_CHAT_IDS
-    ):
-        logger.info(
-            "Unauthorized public photo message from user %s",
-            update.message.from_user.id,
-        )
+    chat_id = update.effective_chat.id
+    db: DatabaseManager = context.bot_data["db"]
+
+    async with db.session_factory() as session:
+        chat = await ChatRepository(session).get_by_chat_id(chat_id)
+
+    if chat is None or chat.status != ChatStatus.approved:
+        logger.debug("Чата нет в БД. Пропускаю.")
         return
 
     logger.info("Received photo message from user %s", update.message.from_user.id)

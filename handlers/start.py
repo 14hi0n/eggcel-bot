@@ -3,10 +3,9 @@ from telegram.ext import ContextTypes
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text(
-        "Привет! Отправь мне фото с подписью, и я сделаю из него мем.\n\n"
-        "Формат подписи:\n"
-        "Верхний текст / Нижний текст\n"
-        "или\n"
-        "Верхний текст\\nНижний текст\n\n"
+    text = (
+        "Добавь меня в чат и вызови бота командой /activate@eggcel_bot\n"
+        "Когда разраб одобрит, тогда я начну делать мемы"
     )
+
+    await update.message.reply_text(text)
