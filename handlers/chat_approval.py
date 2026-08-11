@@ -96,7 +96,10 @@ async def on_activate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         )
         await update.message.reply_text("Заявка отправлена")
     else:
-        await update.message.reply_text(f"Текущий статус: {chat.status.value}")
+        status = chat.status.value
+        if status == ChatStatus.pending:
+            status = "pegging"
+        await update.message.reply_text(f"Текущий статус: {status}")
 
 
 async def notify_admin(
