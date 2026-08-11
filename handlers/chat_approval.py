@@ -69,7 +69,7 @@ async def on_bot_added(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 async def on_activate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.effective_chat.type not in (ChatType.GROUP, ChatType.SUPERGROUP):
-        logger.info("Это не супергруппа и не группа. пропускаю")
+        logger.debug("Это не супергруппа и не группа. пропускаю")
         await update.message.reply_text("Эту команду нужно вводить в чате, а не в ЛС")
         return
 
@@ -86,8 +86,7 @@ async def on_activate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             )
 
     if created:
-        logger.info("Добавил новый канал и отправил заявку админу")
-
+        logger.debug("Добавил новый канал и отправил заявку админу")
         await notify_admin(
             tg_chat.id, tg_chat.title or str(tg_chat.id), tg_chat.type, context
         )

@@ -12,8 +12,10 @@ from telegram.ext import (
 
 from config import Config
 from database.manager import DatabaseManager
+from handlers.add_chat import add_chat
 from handlers.chat_approval import chat_moderate_callback, on_activate, on_bot_added
 from handlers.photo import handle_private_photo, handle_public_photo
+from handlers.remove_chat import remove_chat
 from handlers.start import start
 
 logging.basicConfig(
@@ -34,7 +36,6 @@ async def post_shutdown(application: Application) -> None:
 
 
 def main() -> None:
-
     application = (
         ApplicationBuilder()
         .token(Config.TELEGRAM_BOT_TOKEN)
@@ -46,6 +47,8 @@ def main() -> None:
         CommandHandler("start", start, filters=filters.ChatType.PRIVATE)
     )
     application.add_handler(CommandHandler("activate", on_activate))
+    application.add_handler(CommandHandler("add", add_chat))
+    application.add_handler(CommandHandler("remove", remove_chat))
 
     application.add_handler(
         ChatMemberHandler(on_bot_added, ChatMemberHandler.MY_CHAT_MEMBER)
