@@ -88,7 +88,11 @@ async def on_activate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     if created:
         logger.debug("Добавил новый канал и отправил заявку админу")
         await notify_admin(
-            tg_chat.id, tg_chat.title or str(tg_chat.id), tg_chat.type, context
+            tg_chat.id,
+            tg_chat.title or str(tg_chat.id),
+            tg_chat.type,
+            tg_chat.username,
+            context,
         )
         await update.message.reply_text("Заявка отправлена")
     else:
