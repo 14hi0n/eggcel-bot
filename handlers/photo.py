@@ -15,7 +15,7 @@ from services.exceptions.gemini import (
     GeminiNSFWError,
     GeminiOutputBlockedError,
 )
-from services.meme_renderer import compress_for_telegram, render_meme_text
+from services.meme_service import create_meme
 from services.text_generator import generate_meme_caption
 from utils.notifications import notify_admins
 
@@ -55,9 +55,9 @@ async def _process_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     meme_bytes = await _process_meme(update=update, content=context, image=input_image)
 
     if meme_bytes is None:
+        logger.warning("_process_meme returned nothing")
         return
 
-    logging.info("Попытка отправить картинку")
     await update.message.reply_photo(photo=meme_bytes)
 
 
@@ -127,9 +127,12 @@ async def _process_meme(
     top_text = meme_data.top_text
     bottom_text = meme_data.bottom_text
 
-    rendered = render_meme_text(image, top_text, bottom_text)
+    rendered = await create_meme(image, top_text, bottom_text)
 
-    return compress_for_telegram(rendered)
+    # rendered = render_meme_text(image, top_text, bottom_text)
+
+    # return compress_for_telegram(rendered)
+    return rendered
 
 
 async def handle_public_photo(
