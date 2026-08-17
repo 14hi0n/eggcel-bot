@@ -129,6 +129,8 @@ async def notify_admin(
     """
     Sends a notification message to the admin(s) specified in the configuration.
 
+    TODO: убрать дублирование с notify_admins
+
     Args:
         message (str): The message to be sent to the admin(s).
     """
