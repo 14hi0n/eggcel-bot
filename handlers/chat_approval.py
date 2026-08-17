@@ -41,30 +41,47 @@ async def chat_moderate_callback(
 
 async def on_bot_added(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     result = update.my_chat_member
-    if result.new_chat_member.status not in ("member", "administrator"):
+
+    if result is None:
+        return
+
+    old_status = result.old_chat_member.status
+    new_status = result.new_chat_member.status
+
+    # Только реальное добавление бота в чат
+    if old_status not in ("left", "kicked") or new_status not in (
+        "member",
+        "administrator",
+    ):
         return
 
     tg_chat = result.chat
+
+    logger.info(
+        "Bot added to chat %s: %s -> %s",
+        tg_chat.id,
+        old_status,
+        new_status,
+    )
 
     db: DatabaseManager = context.bot_data["db"]
 
     async with db.session_factory() as session:
         async with session.begin():
-            _, created = await ChatRepository(session).get_or_create_pending(
+            await ChatRepository(session).create_or_reset_pending(
                 chat_id=tg_chat.id,
                 chat_type=tg_chat.type,
                 chat_title=tg_chat.title,
                 tag_name=tg_chat.username,
             )
 
-    if created:
-        await notify_admin(
-            tg_chat.id,
-            tg_chat.title or str(tg_chat.id),
-            tg_chat.type,
-            tg_chat.username,
-            context,
-        )
+    await notify_admin(
+        tg_chat.id,
+        tg_chat.title or str(tg_chat.id),
+        tg_chat.type,
+        tg_chat.username,
+        context,
+    )
 
 
 async def on_activate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -78,7 +95,7 @@ async def on_activate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     async with db.session_factory() as session:
         async with session.begin():
-            chat, created = await ChatRepository(session).get_or_create_pending(
+            chat, created = await ChatRepository(session).create_or_reset_pending(
                 chat_id=tg_chat.id,
                 chat_type=tg_chat.type,
                 chat_title=tg_chat.title,

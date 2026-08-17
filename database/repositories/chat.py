@@ -17,7 +17,7 @@ class ChatRepository:
 
         return result.scalar_one_or_none()
 
-    async def get_or_create_pending(
+    async def create_or_reset_pending(
         self,
         chat_id: int,
         chat_type: str,
@@ -25,21 +25,25 @@ class ChatRepository:
         tag_name: str,
     ) -> Tuple[Chat, bool]:
         chat = await self.get_by_chat_id(chat_id)
-        if chat is not None:
-            return chat, False
 
-        chat = Chat(
-            chat_id=chat_id,
-            chat_type=chat_type,
-            chat_title=chat_title,
-            tag_name=tag_name,
-            status=ChatStatus.pending,
-        )
-        self.session.add(chat)
+        if chat is None:
+            chat = Chat(
+                chat_id=chat_id,
+                chat_type=chat_type,
+                chat_title=chat_title,
+                tag_name=tag_name,
+                status=ChatStatus.pending,
+            )
+            self.session.add(chat)
+        else:
+            chat.chat_type = chat_type
+            chat.chat_title = chat_title
+            chat.tag_name = tag_name
+            chat.status = ChatStatus.pending
+
         await self.session.flush()
-        await self.session.refresh(chat)
 
-        return chat, True
+        return chat
 
     async def set_status(self, chat_id: int, status: ChatStatus) -> Optional[Chat]:
         chat = await self.get_by_chat_id(chat_id)

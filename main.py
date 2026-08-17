@@ -1,5 +1,3 @@
-import logging
-
 from telegram.ext import (
     Application,
     ApplicationBuilder,
@@ -17,11 +15,7 @@ from handlers.chat_approval import chat_moderate_callback, on_activate, on_bot_a
 from handlers.photo import handle_private_photo, handle_public_photo
 from handlers.remove_chat import remove_chat
 from handlers.start import start
-
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO,
-)
+from utils.logging_config import setup_logging
 
 
 async def post_init(application: Application) -> None:
@@ -36,6 +30,8 @@ async def post_shutdown(application: Application) -> None:
 
 
 def main() -> None:
+    setup_logging()
+
     application = (
         ApplicationBuilder()
         .token(Config.TELEGRAM_BOT_TOKEN)

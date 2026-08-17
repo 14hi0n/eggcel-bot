@@ -1,4 +1,5 @@
-import logging
+from enum import Enum
+from typing import Literal
 
 from google import genai
 from google.genai import errors, types
@@ -7,7 +8,14 @@ from pydantic import BaseModel
 
 from config import Config
 
-logger = logging.getLogger(__name__)
+from .exceptions.gemini import (
+    GeminiError,
+    GeminiInputBlockedError,
+    GeminiNoCandidatesError,
+    GeminiNSFWError,
+    GeminiOutputBlockedError,
+    GeminiParseError,
+)
 
 _PROMPT = (
     "Ты пишешь подписи для классических Impact-мемов, которые будут нанесены "
@@ -34,8 +42,14 @@ _PROMPT = (
     "Используй одну или две строки. "
     "Максимум шесть слов в строке. "
     "Не добавляй никаких пояснений, только текст для изображения."
+    "\n\n"
+    "ВАЖНО! Если на изображении содержится порнография или обнажённая натура, "
+    "верни verdict='REJECTED' и reason='NSFW'. "
+    "Не создавай в этом случае подпись. "
+    "Во всех остальных случаях верни verdict='OK' и сгенерируй подпись."
 )
 
+# Работает только для OUTPUT
 _SAFETY_SETTINGS = [
     types.SafetySetting(
         category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
@@ -58,12 +72,59 @@ _SAFETY_SETTINGS = [
 _client = genai.Client(api_key=Config.GEMINI_API_KEY)
 
 
-class _MemeTextSchema(BaseModel):
-    top_text: str | None
+"""
+Gemini должен вернуть одну из двух форм.
+
+Успешная генерация:
+{
+  "result": {
+    "verdict": "OK",
+    "top_text": null,
+    "bottom_text": "КУДА Я ОПЯТЬ ПОПАЛ"
+  }
+}
+
+Или отказ:
+{
+  "result": {
+    "verdict": "REJECTED",
+    "reason": "NSFW"
+  }
+}
+
+Такая структура нужна, чтобы успешный результат всегда содержал
+bottom_text, а отказ имел отдельный формат.
+"""
+
+
+class _RejectionReason(str, Enum):
+    """Причины отказа в генерации."""
+
+    NSFW = "NSFW"
+
+
+class _OkResult(BaseModel):
+    """Результат успешной генерации."""
+
+    verdict: Literal["OK"]
+    top_text: str | None = None
     bottom_text: str
 
 
-def generate_meme_caption(image: Image.Image) -> _MemeTextSchema | None:
+class _RejectResult(BaseModel):
+    """Результат отказа в генерации."""
+
+    verdict: Literal["REJECTED"]
+    reason: _RejectionReason
+
+
+class _MemeTextSchema(BaseModel):
+    """Ответ Gemini: успешная генерация или отказ."""
+
+    result: _OkResult | _RejectResult
+
+
+async def generate_meme_caption(image: Image.Image) -> _OkResult | None:
     """
     Generates a meme caption based on an image.
 
@@ -74,7 +135,7 @@ def generate_meme_caption(image: Image.Image) -> _MemeTextSchema | None:
         str: The generated meme caption.
     """
     try:
-        response = _client.models.generate_content(
+        response = await _client.aio.models.generate_content(
             model=Config.GEMINI_MODEL,
             contents=[image, _PROMPT],
             config=types.GenerateContentConfig(
@@ -83,12 +144,8 @@ def generate_meme_caption(image: Image.Image) -> _MemeTextSchema | None:
                 safety_settings=_SAFETY_SETTINGS,
             ),
         )
-    except errors.ClientError as esc:
-        logger.warning(
-            "Какая-то странная ошибка, которую стоит обработать: %s",
-            esc,
-        )
-        raise
+    except errors.ClientError as exc:
+        raise GeminiError(str(exc)) from exc
 
     # Если gemini не понравился input.
     # Например картинка или сам промпт.
@@ -96,35 +153,30 @@ def generate_meme_caption(image: Image.Image) -> _MemeTextSchema | None:
         response.prompt_feedback is not None
         and response.prompt_feedback.block_reason is not None
     ):
-        logger.warning(
-            "Gemini INPUT feedback: block_reason=%s safety_ratings=%s",
-            response.prompt_feedback.block_reason,
-            response.prompt_feedback.safety_ratings,
+        raise GeminiInputBlockedError(
+            f"block_reason={response.prompt_feedback.block_reason}, "
+            f"safety_ratings={response.prompt_feedback.safety_ratings}"
         )
-        return None
 
     if not response.candidates:
-        logger.warning(
-            "Gemini returned no candidates. prompt_feedback=%s",
-            response.prompt_feedback,
-        )
-        return None
+        raise GeminiNoCandidatesError(f"prompt_feedback={response.prompt_feedback}")
 
     candidate = response.candidates[0]
 
     # OUTPUT был остановлен фильтром
     if candidate.finish_reason == types.FinishReason.SAFETY:
-        logger.warning(
-            "Gemini OUTPIUT blocked: safity_rating=%s",
-            candidate.safety_ratings,
-        )
-        return None
+        raise GeminiOutputBlockedError(f"safity_rating={candidate.safety_ratings}")
 
-    if response.parsed is None:
-        logger.warning(
-            "Gemini response could not be parsed. finish_reason=%s",
-            candidate.finish_reason,
-        )
-        return None
+    meme_data = response.parsed
 
-    return response.parsed
+    if meme_data is None:
+        raise GeminiParseError(
+            f"Could not parse Gemini response. finish_reason={candidate.finish_reason}"
+        )
+
+    result = meme_data.result
+
+    if isinstance(result, _RejectResult):
+        raise GeminiNSFWError(f"Gemini rejected input: {result.reason.value}")
+
+    return result

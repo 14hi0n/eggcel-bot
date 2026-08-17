@@ -1,4 +1,3 @@
-import asyncio
 import io
 import logging
 import random
@@ -10,13 +9,36 @@ from telegram.ext import ContextTypes
 from config import Config
 from database.manager import DatabaseManager
 from database.repositories.chat import ChatRepository, ChatStatus
+from services.exceptions.gemini import (
+    GeminiError,
+    GeminiInputBlockedError,
+    GeminiNSFWError,
+    GeminiOutputBlockedError,
+)
 from services.meme_renderer import compress_for_telegram, render_meme_text
 from services.text_generator import generate_meme_caption
+from utils.notifications import notify_admins
 
 logger = logging.getLogger(__name__)
 
 
-async def _process_photo(update: Update) -> None:
+def _build_admin_context(update: Update) -> str:
+    chat = update.effective_chat
+    user = update.effective_user
+    message = update.effective_message
+
+    return (
+        f"Chat: {chat.title or chat.full_name or 'Private chat'}\n"
+        f"Chat ID: {chat.id}\n"
+        f"Chat type: {chat.type}\n"
+        f"User: {user.full_name if user else 'Unknown'}\n"
+        f"Username: @{user.username if user and user.username else '???'}\n"
+        f"User ID: {user.id if user else '???'}\n"
+        f"Message ID: {message.message_id if message else '???'}"
+    )
+
+
+async def _process_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Processes the photo and generates a meme with the given text.
     """
@@ -30,23 +52,83 @@ async def _process_photo(update: Update) -> None:
     photo_bytes = await photo_file.download_as_bytearray()
     input_image = Image.open(io.BytesIO(photo_bytes))
 
-    meme_bytes = await asyncio.to_thread(
-        _process_meme,
-        input_image,
-    )
+    meme_bytes = await _process_meme(update=update, content=context, image=input_image)
 
+    if meme_bytes is None:
+        return
+
+    logging.info("Попытка отправить картинку")
     await update.message.reply_photo(photo=meme_bytes)
 
 
-def _process_meme(image: Image.Image) -> bytes:
+async def _process_meme(
+    update: Update,
+    content: ContextTypes.DEFAULT_TYPE,
+    image: Image.Image,
+) -> bytes | None:
     """
     Processes the image and generates a meme with the given text.
     """
-    meme_data = generate_meme_caption(image)
+    admin_context = _build_admin_context(update)
+
+    try:
+        meme_data = await generate_meme_caption(image)
+    except GeminiInputBlockedError as exc:
+        logger.warning(
+            "Gemini input blocked: chat_id=%s user_id=%s error=%s",
+            update.effective_chat.id,
+            update.effective_user.id if update.effective_user else None,
+            exc,
+        )
+        await notify_admins(
+            bot=content.bot,
+            text=(f"Gemini заблокировал INPUT\n\n{admin_context}\n\n{exc}"),
+        )
+        return None
+    except GeminiOutputBlockedError as exc:
+        logger.warning(
+            "Gemini output blocked: chat_id=%s user_id=%s error=%s",
+            update.effective_chat.id,
+            update.effective_user.id if update.effective_user else None,
+            exc,
+        )
+        await notify_admins(
+            bot=content.bot,
+            text=f"Gemini заблокировал OUTPUT\n\n{admin_context}\n\n{exc}",
+        )
+        return None
+
+    except GeminiNSFWError as exc:
+        logger.warning(
+            "Gemini NSFW Error: chat_id=%s user_id=%s error=%s",
+            update.effective_chat.id,
+            update.effective_user.id if update.effective_user else None,
+            exc,
+        )
+        await notify_admins(
+            bot=content.bot,
+            text=f"Gemini обнаружил NSFW\n\n{admin_context}",
+        )
+        return None
+
+    except GeminiError as exc:
+        logger.exception(
+            "Gemini error: chat_id=%s user_id=%s error=%s",
+            update.effective_chat.id,
+            update.effective_user.id if update.effective_user else None,
+            exc,
+        )
+        await notify_admins(
+            bot=content.bot,
+            text=f"Gemini error\n\n{admin_context}\n\n{exc}",
+        )
+        return None
+
     top_text = meme_data.top_text
     bottom_text = meme_data.bottom_text
 
     rendered = render_meme_text(image, top_text, bottom_text)
+
     return compress_for_telegram(rendered)
 
 
@@ -56,27 +138,27 @@ async def handle_public_photo(
     """
     It edits photos and generates memes with text.
     """
-
     if not update.message or not update.message.photo:
         return
 
+    chat_id = update.effective_chat.id
+
     if random.random() >= Config.MEME_PROBABILITY:
-        logger.debug("Skipping photo message from user %s", update.message.from_user.id)
+        logger.debug("Skipping photo message from user %s", chat_id)
         return
 
-    chat_id = update.effective_chat.id
     db: DatabaseManager = context.bot_data["db"]
 
     async with db.session_factory() as session:
         chat = await ChatRepository(session).get_by_chat_id(chat_id)
 
     if chat is None or chat.status != ChatStatus.approved:
-        logger.debug("Чата нет в БД. Пропускаю.")
+        logger.debug("The chat_id %s hasn't been approved. Skip it", chat_id)
         return
 
-    logger.info("Received photo message from user %s", update.message.from_user.id)
+    logger.info("Received photo message from user %s", chat_id)
 
-    await _process_photo(update)
+    await _process_photo(update, context)
 
 
 async def handle_private_photo(
@@ -89,15 +171,15 @@ async def handle_private_photo(
     if not update.message or not update.message.photo:
         return
 
-    if Config.ADMIN_IDS and update.message.from_user.id not in Config.ADMIN_IDS:
-        logger.info(
+    user_id = update.message.from_user.id
+
+    if Config.ADMIN_IDS and user_id not in Config.ADMIN_IDS:
+        logger.debug(
             "Unauthorized private photo message from user %s",
-            update.message.from_user.id,
+            user_id,
         )
         return
 
-    logger.info(
-        "Received private photo message from user %s", update.message.from_user.id
-    )
+    logger.info("Received private photo message from user %s", user_id)
 
-    await _process_photo(update)
+    await _process_photo(update, context)

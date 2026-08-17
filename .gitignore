@@ -31,6 +31,9 @@ wheels/
 .mypy_cache/
 .coverage
 
+# Application logs
+*.log
+
 # ==========================================
 # IDE & Editors
 # ==========================================
