@@ -18,6 +18,8 @@ from services.exceptions.gemini import (
 from services.meme_service import create_meme
 from services.text_generator import generate_meme_caption
 from utils.notifications import notify_admins
+from utils.parse import parse_meme_caption
+from utils.telegram import download_photo
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +54,9 @@ async def _process_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     photo_bytes = await photo_file.download_as_bytearray()
     input_image = Image.open(io.BytesIO(photo_bytes))
 
-    meme_bytes = await _process_meme(update=update, content=context, image=input_image)
+    meme_bytes = await _create_ai_meme(
+        update=update, content=context, image=input_image
+    )
 
     if meme_bytes is None:
         logger.warning("_process_meme returned nothing")
@@ -61,7 +65,7 @@ async def _process_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await update.message.reply_photo(photo=meme_bytes)
 
 
-async def _process_meme(
+async def _create_ai_meme(
     update: Update,
     content: ContextTypes.DEFAULT_TYPE,
     image: Image.Image,
@@ -73,6 +77,7 @@ async def _process_meme(
 
     try:
         meme_data = await generate_meme_caption(image)
+
     except GeminiInputBlockedError as exc:
         logger.warning(
             "Gemini input blocked: chat_id=%s user_id=%s error=%s",
@@ -124,30 +129,23 @@ async def _process_meme(
         )
         return None
 
-    top_text = meme_data.top_text
-    bottom_text = meme_data.bottom_text
-
-    rendered = await create_meme(image, top_text, bottom_text)
-
-    # rendered = render_meme_text(image, top_text, bottom_text)
-
-    # return compress_for_telegram(rendered)
-    return rendered
+    return await create_meme(
+        image,
+        meme_data.top_text,
+        meme_data.bottom_text,
+    )
 
 
 async def handle_public_photo(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    """
-    It edits photos and generates memes with text.
-    """
     if not update.message or not update.message.photo:
         return
 
     chat_id = update.effective_chat.id
 
     if random.random() >= Config.MEME_PROBABILITY:
-        logger.debug("Skipping photo message from user %s", chat_id)
+        logger.debug("Skipping photo message from chat %s", chat_id)
         return
 
     db: DatabaseManager = context.bot_data["db"]
@@ -159,30 +157,51 @@ async def handle_public_photo(
         logger.debug("The chat_id %s hasn't been approved. Skip it", chat_id)
         return
 
-    logger.info("Received photo message from user %s", chat_id)
+    logger.info("Received photo message from chat %s", chat_id)
 
-    await _process_photo(update, context)
+    image = await download_photo(update)
+    logger.info("Generating a meme for the chat %s", chat_id)
+    meme_image_bytes = await _create_ai_meme(update, context, image)
+
+    if meme_image_bytes is None:
+        return
+
+    await update.message.reply_photo(photo=meme_image_bytes)
+    logger.info("Sent an AI meme to the chat %s", chat_id)
 
 
 async def handle_private_photo(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    """
-    It edits photos and generates memes with text.
-    """
+    message = update.message
 
-    if not update.message or not update.message.photo:
+    if not message or not message.photo:
         return
 
     user_id = update.message.from_user.id
+    caption = message.caption
 
-    if Config.ADMIN_IDS and user_id not in Config.ADMIN_IDS:
-        logger.debug(
-            "Unauthorized private photo message from user %s",
-            user_id,
-        )
+    logger.info("Received private photo message from user: %s", user_id)
+
+    if not caption:
+        await message.reply_text("Добавь текст к изображению")
         return
 
-    logger.info("Received private photo message from user %s", user_id)
+    try:
+        top_text, bottom_text = parse_meme_caption(caption)
 
-    await _process_photo(update, context)
+    except ValueError:
+        logger.debug(
+            "A user sent a caption that couldn't be parsed. User ID: %s Caption: %s",
+            user_id,
+            caption,
+        )
+        await message.reply_text("Не удалось разобрать текст")
+        return
+
+    image = await download_photo(update)
+    logger.info("Generating a meme for the user %s", user_id)
+    meme_image_bytes = await create_meme(image, top_text, bottom_text)
+
+    await update.message.reply_photo(photo=meme_image_bytes)
+    logger.info("Sent a custom meme back to the user: %s", user_id)
