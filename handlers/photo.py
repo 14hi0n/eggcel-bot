@@ -14,6 +14,7 @@ from services.exceptions.gemini import (
     GeminiInputBlockedError,
     GeminiNSFWError,
     GeminiOutputBlockedError,
+    GeminiUnavailableError,
 )
 from services.meme_service import create_meme
 from services.text_generator import generate_meme_caption
@@ -77,6 +78,22 @@ async def _create_ai_meme(
 
     try:
         meme_data = await generate_meme_caption(image)
+
+    except GeminiUnavailableError as exc:
+        logger.warning(
+            "Gemini unavailable: chat_id=%s user_id=%s error=%s",
+            update.effective_chat.id,
+            update.effective_user.id if update.effective_user else None,
+            exc,
+        )
+        await notify_admins(
+            bot=content.bot,
+            text=(
+                f"Gemini API выдал ошибку 503, вероятно перегруз серверов"
+                f"\n\n{admin_context}\n\n{exc}"
+            ),
+        )
+        return None
 
     except GeminiInputBlockedError as exc:
         logger.warning(

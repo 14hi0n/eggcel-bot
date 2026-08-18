@@ -20,3 +20,7 @@ class GeminiParseError(GeminiError):
 
 class GeminiNSFWError(GeminiError):
     pass
+
+
+class GeminiUnavailableError(GeminiError):
+    pass

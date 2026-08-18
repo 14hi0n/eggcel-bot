@@ -15,6 +15,7 @@ from .exceptions.gemini import (
     GeminiNSFWError,
     GeminiOutputBlockedError,
     GeminiParseError,
+    GeminiUnavailableError,
 )
 
 _PROMPT = (
@@ -144,6 +145,14 @@ async def generate_meme_caption(image: Image.Image) -> _OkResult | None:
                 safety_settings=_SAFETY_SETTINGS,
             ),
         )
+
+    except errors.ServerError as exc:
+        if exc.code == 503:
+            raise GeminiUnavailableError(
+                exc.message or "Gemini API unvailable."
+            ) from exc
+        raise GeminiError(str(exc)) from exc
+
     except errors.ClientError as exc:
         raise GeminiError(str(exc)) from exc
 
