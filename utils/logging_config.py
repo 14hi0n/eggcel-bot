@@ -23,6 +23,7 @@ def setup_logging() -> None:
     root_logger.addHandler(file_handler)
 
     for name in (
+        "__main__",
         "handlers",
         "services",
         "database",

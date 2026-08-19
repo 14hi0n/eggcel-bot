@@ -20,7 +20,6 @@ from handlers.start import start
 from utils.logging_config import setup_logging
 
 setup_logging()
-
 logger = logging.getLogger(__name__)
 
 
@@ -36,6 +35,7 @@ async def post_shutdown(application: Application) -> None:
 
 
 def main() -> None:
+
     application = (
         ApplicationBuilder()
         .token(Config.TELEGRAM_BOT_TOKEN)
