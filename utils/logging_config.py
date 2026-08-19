@@ -3,7 +3,7 @@ import logging
 
 def setup_logging() -> None:
     formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        "%(asctime)s | %(levelname)s | %(name)s | %(funcName)s | %(message)s"
     )
 
     console_handler = logging.StreamHandler()

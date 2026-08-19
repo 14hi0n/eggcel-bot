@@ -1,3 +1,5 @@
+import logging
+
 from telegram.ext import (
     Application,
     ApplicationBuilder,
@@ -17,6 +19,10 @@ from handlers.remove_chat import remove_chat
 from handlers.start import start
 from utils.logging_config import setup_logging
 
+setup_logging()
+
+logger = logging.getLogger(__name__)
+
 
 async def post_init(application: Application) -> None:
     db = DatabaseManager(Config.DATABASE_URL)
@@ -30,8 +36,6 @@ async def post_shutdown(application: Application) -> None:
 
 
 def main() -> None:
-    setup_logging()
-
     application = (
         ApplicationBuilder()
         .token(Config.TELEGRAM_BOT_TOKEN)
@@ -60,6 +64,7 @@ def main() -> None:
         CallbackQueryHandler(chat_moderate_callback, pattern=r"^chat:(approve|reject):")
     )
 
+    logger.info("Launching the bot")
     application.run_polling()
 
 
