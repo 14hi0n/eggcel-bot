@@ -12,4 +12,6 @@ COPY . .
 
 ENV PATH="/app/.venv/bin:$PATH"
 
+EXPOSE 8080
+
 CMD ["python", "main.py"]

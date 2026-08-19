@@ -15,3 +15,4 @@ class Config:
         map(int, os.getenv("ALLOWED_CHAT_IDS", "").split(","))
     )
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///database.db")
+    ENABLE_HEALTH_SERVER: str = os.getenv("ENABLE_HEALTH_SERVER", "0")
