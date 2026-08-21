@@ -1,9 +1,9 @@
 import io
-from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
-FONT_PATH = Path(__file__).resolve().parent.parent / "assets" / "fonts" / "impact.ttf"
+from services.font_service import get_font_path
+
 FONT_SIZE_RATIO = 0.10
 
 
@@ -82,9 +82,10 @@ def fit_text(
             A tuple containing the fitted font and wrapped text lines.
     """
     size = start_size
+    font = str(get_font_path())
 
     while size > 10:
-        font = ImageFont.truetype(str(FONT_PATH), size)
+        font = ImageFont.truetype(font, size)
         lines = wrap_text(text, font, max_w, draw)
 
         total_height = len(lines) * size * 1.1
@@ -94,7 +95,7 @@ def fit_text(
 
         size -= 4
 
-    font = ImageFont.truetype(str(FONT_PATH), 10)
+    font = ImageFont.truetype(font, 10)
     return font, wrap_text(text, font, max_w, draw)
 
 

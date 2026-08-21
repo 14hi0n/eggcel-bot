@@ -4,7 +4,7 @@ from telegram import Update
 from telegram.constants import ChatType
 from telegram.ext import ContextTypes
 
-from config import Config
+from config import settings
 from database.manager import DatabaseManager
 from database.models.chat import ChatStatus
 from database.repositories.chat import ChatRepository
@@ -145,7 +145,7 @@ async def notify_admin(
     if chat_tag is not None:
         text += f"\nChat Tag: {chat_tag}"
 
-    for admin_id in Config.ADMIN_IDS:
+    for admin_id in settings.admin_ids:
         await bot.send_message(
             chat_id=admin_id,
             text=text,

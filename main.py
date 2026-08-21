@@ -11,7 +11,7 @@ from telegram.ext import (
     filters,
 )
 
-from config import Config
+from config import settings
 from database.manager import DatabaseManager
 from handlers.add_chat import add_chat
 from handlers.chat_approval import chat_moderate_callback, on_bot_added
@@ -19,6 +19,7 @@ from handlers.photo import handle_private_photo, handle_public_photo
 from handlers.remove_chat import remove_chat
 from handlers.start import start
 from healch_server import run_health_server
+from services.font_service import prepare_font
 from utils.logging_config import setup_logging
 
 setup_logging()
@@ -26,7 +27,11 @@ logger = logging.getLogger(__name__)
 
 
 async def post_init(application: Application) -> None:
-    db = DatabaseManager(Config.DATABASE_URL)
+    logger.info("Init application")
+
+    await prepare_font()
+
+    db = DatabaseManager(settings.database_url)
     await db.init()
     application.bot_data["db"] = db
 
@@ -37,7 +42,7 @@ async def post_shutdown(application: Application) -> None:
 
 
 def main() -> None:
-    if Config.ENABLE_HEALTH_SERVER == "1":
+    if settings.enable_health_server == "1":
         logger.debug(
             "ENABLE_HEALTH_SERVER is enabled; Starting a thread with run_health_server"
         )
@@ -48,7 +53,7 @@ def main() -> None:
 
     application = (
         ApplicationBuilder()
-        .token(Config.TELEGRAM_BOT_TOKEN)
+        .token(settings.telegram_bot_token)
         .post_init(post_init)
         .post_shutdown(post_shutdown)
         .build()
@@ -74,8 +79,16 @@ def main() -> None:
         CallbackQueryHandler(chat_moderate_callback, pattern=r"^chat:(approve|reject):")
     )
 
-    logger.info("Launching the bot")
-    application.run_polling()
+    if settings.webhook_url:
+        logger.info("Launching bot with webhook")
+        application.run_webhook(
+            listen="0.0.0.0",
+            port=settings.webhook_port,
+            webhook_url=f"{settings.webhook_url}/{settings.webhook_path}",
+        )
+    else:
+        logger.info("Launching bot with polling")
+        application.run_polling()
 
 
 if __name__ == "__main__":

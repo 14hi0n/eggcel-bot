@@ -1,14 +1,14 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from config import Config
+from config import settings
 from database.manager import DatabaseManager
 from database.models.chat import ChatStatus
 from database.repositories.chat import ChatRepository
 
 
 async def remove_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.effective_user.id not in Config.ADMIN_IDS:
+    if update.effective_user.id not in settings.admin_ids:
         return
 
     if not context.args:

@@ -6,7 +6,7 @@ from google.genai import errors, types
 from PIL import Image
 from pydantic import BaseModel
 
-from config import Config
+from config import settings
 
 from .exceptions.gemini import (
     GeminiError,
@@ -70,7 +70,7 @@ _SAFETY_SETTINGS = [
     ),
 ]
 
-_client = genai.Client(api_key=Config.GEMINI_API_KEY)
+_client = genai.Client(api_key=settings.gemini_api_key)
 
 
 """
@@ -137,7 +137,7 @@ async def generate_meme_caption(image: Image.Image) -> _OkResult | None:
     """
     try:
         response = await _client.aio.models.generate_content(
-            model=Config.GEMINI_MODEL,
+            model=settings.gemini_model,
             contents=[image, _PROMPT],
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",

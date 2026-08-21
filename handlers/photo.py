@@ -6,7 +6,7 @@ from PIL import Image
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from config import Config
+from config import settings
 from database.manager import DatabaseManager
 from database.repositories.chat import ChatRepository, ChatStatus
 from services.exceptions.gemini import (
@@ -161,7 +161,7 @@ async def handle_public_photo(
 
     chat_id = update.effective_chat.id
 
-    if random.random() >= Config.MEME_PROBABILITY:
+    if random.random() >= settings.meme_probability:
         logger.debug("Skipping photo message from chat %s", chat_id)
         return
 

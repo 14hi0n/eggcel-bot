@@ -2,13 +2,13 @@ import logging
 
 from telegram import Bot
 
-from config import Config
+from config import settings
 
 logger = logging.getLogger(__name__)
 
 
 async def notify_admins(bot: Bot, text: str, reply_markup: str | None = None) -> None:
-    for admin_id in Config.ADMIN_IDS:
+    for admin_id in settings.admin_ids:
         try:
             await bot.send_message(
                 chat_id=admin_id,

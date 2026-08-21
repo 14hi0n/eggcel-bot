@@ -4,7 +4,7 @@ from telegram import Update
 from telegram.error import TelegramError
 from telegram.ext import ContextTypes
 
-from config import Config
+from config import settings
 from database.manager import DatabaseManager
 from database.repositories.chat import ChatRepository
 
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 async def add_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.effective_user.id not in Config.ADMIN_IDS:
+    if update.effective_user.id not in settings.admin_ids:
         return
 
     if not context.args:
