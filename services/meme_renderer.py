@@ -82,10 +82,10 @@ def fit_text(
             A tuple containing the fitted font and wrapped text lines.
     """
     size = start_size
-    font = str(get_font_path())
+    font_path = str(get_font_path())
 
     while size > 10:
-        font = ImageFont.truetype(font, size)
+        font = ImageFont.truetype(font_path, size)
         lines = wrap_text(text, font, max_w, draw)
 
         total_height = len(lines) * size * 1.1
@@ -95,7 +95,7 @@ def fit_text(
 
         size -= 4
 
-    font = ImageFont.truetype(font, 10)
+    font = ImageFont.truetype(font_path, 10)
     return font, wrap_text(text, font, max_w, draw)
 
 
