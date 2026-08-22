@@ -174,14 +174,16 @@ async def handle_private_photo(
 
     logger.info("Received private photo message from user: %s", user_id)
 
-    if not caption and user_id not in settings.admin_ids:
-        await message.reply_text("Добавь текст к изображению")
-        return
+    if not caption:
+        if user_id in settings.admin_ids:
+            logger.info("Generating AI meme for admin %s", user_id)
+            image = await download_photo(update)
+            meme_image_bytes = await _create_ai_meme(update, context, image)
+            await update.message.reply_photo(photo=meme_image_bytes)
+            logger.info("Sent an AI meme to admin %s", user_id)
+            return
 
-    if user_id in settings.admin_ids:
-        image = await download_photo(update)
-        meme_image_bytes = await _create_ai_meme(update, context, image)
-        await update.message.reply_photo(photo=meme_image_bytes)
+        await message.reply_text("Добавь текст к изображению")
         return
 
     try:
