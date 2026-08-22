@@ -1,4 +1,3 @@
-import io
 import logging
 import random
 
@@ -39,31 +38,6 @@ def _build_admin_context(update: Update) -> str:
         f"User ID: {user.id if user else '???'}\n"
         f"Message ID: {message.message_id if message else '???'}"
     )
-
-
-async def _process_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """
-    Processes the photo and generates a meme with the given text.
-    """
-    if not update.message or not update.message.photo:
-        return
-
-    # get the photo with the highest resolution
-    photo_file = await update.message.photo[-1].get_file()
-
-    # downloads the file to the buffer
-    photo_bytes = await photo_file.download_as_bytearray()
-    input_image = Image.open(io.BytesIO(photo_bytes))
-
-    meme_bytes = await _create_ai_meme(
-        update=update, content=context, image=input_image
-    )
-
-    if meme_bytes is None:
-        logger.warning("_process_meme returned nothing")
-        return
-
-    await update.message.reply_photo(photo=meme_bytes)
 
 
 async def _create_ai_meme(
@@ -200,8 +174,14 @@ async def handle_private_photo(
 
     logger.info("Received private photo message from user: %s", user_id)
 
-    if not caption:
+    if not caption and user_id not in settings.admin_ids:
         await message.reply_text("Добавь текст к изображению")
+        return
+
+    if user_id in settings.admin_ids:
+        image = await download_photo(update)
+        meme_image_bytes = await _create_ai_meme(update, context, image)
+        await update.message.reply_photo(photo=meme_image_bytes)
         return
 
     try:
