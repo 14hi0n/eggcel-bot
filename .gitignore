@@ -52,4 +52,7 @@ Thumbs.db
 # Assets & Fonts
 # ==========================================
 assets/fonts/runtime
+assets/prompts/*.txt
 *.db
+
+!assets/prompts/.gitkeep
