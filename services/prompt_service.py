@@ -3,6 +3,7 @@ from pathlib import Path
 from anyio import Path as AsyncPath
 
 from config import settings
+from services.meme_style import get_random_style
 
 _REQUIRED_PROMPT = (
     "Если на изображении содержится порнография или обнажённая натура, "
@@ -34,7 +35,16 @@ class MemeCaptionPrompt:
 
     async def get(self) -> str:
         row_prompt = await self.loader.get()
-        return f"{row_prompt}\n\n{_REQUIRED_PROMPT}"
+        style = get_random_style()
+
+        parts = [row_prompt]
+
+        if style:
+            parts.append(style)
+
+        parts.append(_REQUIRED_PROMPT)
+
+        return "\n\n".join(parts)
 
 
 meme_caption_prompt = MemeCaptionPrompt(
