@@ -26,7 +26,7 @@ class _Settings(BaseSettings):
 
     gemini_api_key: str
     gemini_model: str = "gemini-3.5-flash-lite"
-    meme_prompt_path: Path = Path(BASE_DIR / "assets/prompts/meme_caption.txt")
+    meme_prompt_path: Path = Path(BASE_DIR / "assets/prompts/default.txt")
 
     meme_probability: float = 0.1
     font_source: str = "assets/fonts/default/Oswald-Bold.ttf"
