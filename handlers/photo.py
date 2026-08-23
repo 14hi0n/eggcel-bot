@@ -6,8 +6,6 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from config import settings
-from database.manager import DatabaseManager
-from database.repositories.chat import ChatRepository, ChatStatus
 from services.exceptions.gemini import (
     GeminiError,
     GeminiInputBlockedError,
@@ -139,14 +137,14 @@ async def handle_public_photo(
         logger.debug("Skipping photo message from chat %s", chat_id)
         return
 
-    db: DatabaseManager = context.bot_data["db"]
+    # db: DatabaseManager = context.bot_data["db"]
 
-    async with db.session_factory() as session:
-        chat = await ChatRepository(session).get_by_chat_id(chat_id)
+    # async with db.session_factory() as session:
+    #     chat = await ChatRepository(session).get_by_chat_id(chat_id)
 
-    if chat is None or chat.status != ChatStatus.approved:
-        logger.debug("The chat_id %s hasn't been approved. Skip it", chat_id)
-        return
+    # if chat is None or chat.status != ChatStatus.approved:
+    #     logger.debug("The chat_id %s hasn't been approved. Skip it", chat_id)
+    #     return
 
     logger.info("Received photo message from chat %s", chat_id)
 

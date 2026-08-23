@@ -17,6 +17,27 @@ class ChatRepository:
 
         return result.scalar_one_or_none()
 
+    async def create(
+        self,
+        chat_id: int,
+        chat_type: str,
+        chat_title: str,
+        tag_name: str,
+        status: ChatStatus,
+    ) -> Chat:
+        chat = Chat(
+            chat_id=chat_id,
+            chat_type=chat_type,
+            chat_title=chat_title,
+            tag_name=tag_name,
+            status=status,
+        )
+
+        self.session.add(chat)
+        await self.session.flush()
+
+        return chat
+
     async def create_or_reset_pending(
         self,
         chat_id: int,
@@ -44,6 +65,9 @@ class ChatRepository:
         await self.session.flush()
 
         return chat
+
+    async def add_approved(self, chat_id: int) -> None:
+        pass
 
     async def set_status(self, chat_id: int, status: ChatStatus) -> Optional[Chat]:
         chat = await self.get_by_chat_id(chat_id)
