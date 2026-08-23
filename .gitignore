@@ -52,5 +52,6 @@ Thumbs.db
 # Assets & Fonts
 # ==========================================
 assets/fonts/runtime
-.local/
+assets/prompts/*.txt
+!assets/prompts/example.txt
 *.db
