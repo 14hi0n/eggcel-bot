@@ -1,5 +1,4 @@
 import logging
-import threading
 
 from telegram.ext import (
     Application,
@@ -19,7 +18,6 @@ from handlers.error import error_handler
 from handlers.photo import handle_private_photo, handle_public_photo
 from handlers.remove_chat import remove_chat
 from handlers.start import start
-from healch_server import run_health_server
 from services.font_service import prepare_font
 from utils.logging_config import setup_logging
 
@@ -43,15 +41,6 @@ async def post_shutdown(application: Application) -> None:
 
 
 def main() -> None:
-    if settings.enable_health_server == "1":
-        logger.debug(
-            "ENABLE_HEALTH_SERVER is enabled; Starting a thread with run_health_server"
-        )
-        threading.Thread(
-            target=run_health_server,
-            daemon=True,
-        ).start()
-
     application = (
         ApplicationBuilder()
         .token(settings.telegram_bot_token)

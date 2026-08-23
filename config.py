@@ -33,8 +33,6 @@ class _Settings(BaseSettings):
 
     database_url: str = "sqlite+aiosqlite:///database.db"
 
-    enable_health_server: bool = False
-
     @field_validator("admin_ids", mode="before")
     @classmethod
     def parse_admin_ids(cls, value: Any) -> Any:
