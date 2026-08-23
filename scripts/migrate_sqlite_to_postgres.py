@@ -29,7 +29,7 @@ async def migrate() -> None:
         if not rows:
             return
 
-        async with postgres_engine.connect() as target:
+        async with postgres_engine.begin() as target:
             await target.execute(
                 insert(Chat.__table__),
                 rows,
