@@ -21,7 +21,7 @@ class _Settings(BaseSettings):
     telegram_bot_token: str
     admin_ids: Annotated[list[int], NoDecode] = Field(default_factory=list)
     webhook_url: str | None = None
-    webhook_port: str = "8080"
+    webhook_port: int = 8080
     webhook_path: str = "telegram"
 
     gemini_api_key: str
@@ -34,6 +34,8 @@ class _Settings(BaseSettings):
 
     database_url: str = "sqlite+aiosqlite:///database.db"
 
+    log_to_file: bool = False
+
     @field_validator("admin_ids", mode="before")
     @classmethod
     def parse_admin_ids(cls, value: Any) -> Any:
@@ -42,4 +44,4 @@ class _Settings(BaseSettings):
         return value
 
 
-settings = _Settings()
+settings = _Settings()  # type: ignore[call-arg]

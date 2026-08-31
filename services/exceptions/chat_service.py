@@ -1,0 +1,2 @@
+class ChatNotFoundError(Exception):
+    pass

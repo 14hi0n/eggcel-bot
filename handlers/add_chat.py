@@ -4,41 +4,52 @@ from telegram import Update
 from telegram.error import TelegramError
 from telegram.ext import ContextTypes
 
-from config import settings
 from database.manager import DatabaseManager
 from database.repositories.chat import ChatRepository
+from services.chat_service import ChatService
 
 logger = logging.getLogger(__name__)
 
 
 async def add_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.effective_user.id not in settings.admin_ids:
+
+    user = update.effective_user
+    message = update.message
+
+    if user is None or message is None:
         return
 
     if not context.args:
-        await update.message.reply_text("Используй: /add <chat_id>")
+        await message.reply_text("Используй: /add <chat_id>")
         return
 
     try:
         chat_id = int(context.args[0])
     except ValueError:
-        await update.message.reply_text("chat_id должен быть числом")
+        await message.reply_text("chat_id должен быть числом")
         return
 
     try:
         tg_chat = await context.bot.get_chat(chat_id)
     except TelegramError as e:
-        await update.message.reply_text(f"Не удалось получить чат: {e}")
+        await message.reply_text(f"Не удалось получить чат: {e}")
         return
 
     db: DatabaseManager = context.bot_data["db"]
-    async with db.session_factory() as session:
-        async with session.begin():
-            chat = await ChatRepository(session).add_approved(
-                chat_id=tg_chat.id,
-                chat_type=tg_chat.type,
-                display_name=tg_chat.title,
-                tag_name=tg_chat.username,
-            )
 
-    await update.message.reply_text(f"Добавлено как approved: {chat.display_name}")
+    async with db.session_factory() as session, session.begin():
+        chat_repo = ChatRepository(session)
+        chat_service = ChatService(chat_repo)
+
+        result = await chat_service.add_approved(
+            chat_id=tg_chat.id,
+            chat_type=tg_chat.type,
+            chat_title=tg_chat.title,
+            tag_name=tg_chat.username,
+        )
+
+    if result.is_created:
+        await message.reply_text(f"Добавлено как approved: {result.chat.chat_id}")
+        return
+
+    await message.reply_text("Чат уже approve")

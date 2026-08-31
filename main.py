@@ -21,26 +21,33 @@ from handlers.start import start
 from services.font_service import prepare_font
 from utils.logging_config import setup_logging
 
-setup_logging()
 logger = logging.getLogger(__name__)
 
 
 async def post_init(application: Application) -> None:
-    logger.info("Init application")
+    logger.info("Application initialization started")
 
     await prepare_font()
 
     db = DatabaseManager(settings.database_url)
-    await db.init()
     application.bot_data["db"] = db
+    await db.init()
+
+    logger.info("Application initialization completed")
 
 
 async def post_shutdown(application: Application) -> None:
     db: DatabaseManager = application.bot_data["db"]
-    await db.close()
+
+    if db is not None:
+        await db.close()
+
+    logger.info("%s BOT STOPPED %s", "=" * 10, "=" * 10)
 
 
 def main() -> None:
+    setup_logging(log_to_file=settings.log_to_file)
+
     application = (
         ApplicationBuilder()
         .token(settings.telegram_bot_token)
@@ -49,12 +56,14 @@ def main() -> None:
         .build()
     )
 
+    admin_filter = filters.User(user_id=settings.admin_ids)
+
     application.add_error_handler(error_handler)
     application.add_handler(
         CommandHandler("start", start, filters=filters.ChatType.PRIVATE)
     )
-    application.add_handler(CommandHandler("add", add_chat))
-    application.add_handler(CommandHandler("remove", remove_chat))
+    application.add_handler(CommandHandler("add", add_chat, filters=admin_filter))
+    application.add_handler(CommandHandler("remove", remove_chat, filters=admin_filter))
 
     application.add_handler(
         ChatMemberHandler(on_bot_added, ChatMemberHandler.MY_CHAT_MEMBER)
@@ -67,18 +76,20 @@ def main() -> None:
     )
 
     application.add_handler(
-        CallbackQueryHandler(chat_moderate_callback, pattern=r"^chat:(approve|reject):")
+        CallbackQueryHandler(
+            chat_moderate_callback, pattern=r"^chat:(approve|rejected):"
+        )
     )
 
     if settings.webhook_url:
-        logger.info("Launching bot with webhook")
+        logger.info("%s BOT STARTING WITH WEBHOOK %s", "=" * 10, "=" * 10)
         application.run_webhook(
             listen="0.0.0.0",
             port=settings.webhook_port,
             webhook_url=f"{settings.webhook_url}/{settings.webhook_path}",
         )
     else:
-        logger.info("Launching bot with polling")
+        logger.info("%s BOT STARTING WITH POLLING %s", "=" * 10, "=" * 10)
         application.run_polling()
 
 
