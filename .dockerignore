@@ -13,3 +13,5 @@ bot.log
 
 .vscode
 .idea
+
+*.db

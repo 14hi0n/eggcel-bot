@@ -54,4 +54,5 @@ Thumbs.db
 assets/fonts/runtime
 assets/prompts/*.txt
 !assets/prompts/example.txt
+!assets/prompts/meme_style.txt
 *.db
