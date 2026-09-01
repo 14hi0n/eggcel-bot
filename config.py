@@ -18,22 +18,25 @@ class _Settings(BaseSettings):
         extra="ignore",
     )
 
+    # Telegram
     telegram_bot_token: str
     admin_ids: Annotated[list[int], NoDecode] = Field(default_factory=list)
     webhook_url: str | None = None
     webhook_port: int = 8080
     webhook_path: str = "telegram"
 
+    # Gemini
     gemini_api_key: str
     gemini_model: str = "gemini-3.5-flash-lite"
-    meme_prompt_path: Path = Path(BASE_DIR / "assets/prompts/example.txt")
-    meme_probability: float = 0.1
-    meme_style_probability: float = 0.33
 
+    # Meme
+    meme_prompt_path: Path = Path(BASE_DIR / "assets/prompts/example.txt")
+    meme_probability: float = Field(default=0.1, ge=0.0, le=1.0)
+    meme_style_probability: float = Field(default=0.33, ge=0.0, le=1.0)
     font_source: str = "assets/fonts/default/Oswald-Bold.ttf"
 
+    # Etc
     database_url: str = "sqlite+aiosqlite:///database.db"
-
     log_to_file: bool = False
 
     @field_validator("admin_ids", mode="before")
@@ -42,6 +45,15 @@ class _Settings(BaseSettings):
         if isinstance(value, str):
             return [int(x.strip()) for x in value.split(",") if x.strip()]
         return value
+
+    @field_validator("webhook_url")
+    @classmethod
+    def normalize_webhook_url(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+
+        value = value.strip().rstrip("/")
+        return value or None
 
 
 settings = _Settings()  # type: ignore[call-arg]
