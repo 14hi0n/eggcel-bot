@@ -26,6 +26,12 @@ async def chat_moderate_callback(
 
     query, message, data = result
 
+    user = update.effective_user
+
+    if user is None or user.id not in settings.admin_ids:
+        await query.answer("Недостаточно прав", show_alert=True)
+        return
+
     try:
         _, status_raw, chat_id_raw = data.split(":")
         status = ChatStatus(status_raw)
