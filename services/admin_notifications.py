@@ -1,6 +1,10 @@
+import logging
 from collections.abc import Sequence
 
 from telegram import Bot, InlineKeyboardMarkup
+from telegram.error import TelegramError
+
+logger = logging.getLogger(__name__)
 
 
 class AdminNotifier:
@@ -24,5 +28,9 @@ class AdminNotifier:
                     text=text,
                     reply_markup=reply_markup,
                 )
-            except Exception:
-                pass
+            except TelegramError as exc:
+                logger.warning(
+                    "Filed to notify admin %s: %s",
+                    admin_id,
+                    exc,
+                )
