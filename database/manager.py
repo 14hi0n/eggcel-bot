@@ -4,7 +4,6 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy.pool import NullPool
 
 from .models.base import Base
 
@@ -13,17 +12,9 @@ class DatabaseManager:
     def __init__(self, database_url: str):
         self.database_url = database_url
 
-        engine_kwargs = {
-            "echo": False,
-            "pool_pre_ping": True,
-        }
-
-        if database_url.startswith("postgresql+asyncpg://"):
-            engine_kwargs["poolclass"] = NullPool
-
         self.engine: AsyncEngine = create_async_engine(
             database_url,
-            **engine_kwargs,
+            pool_pre_ping=True,
         )
 
         self.session_factory = async_sessionmaker(
