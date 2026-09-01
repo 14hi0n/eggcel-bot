@@ -77,7 +77,8 @@ def main() -> None:
 
     application.add_handler(
         CallbackQueryHandler(
-            chat_moderate_callback, pattern=r"^chat:(approve|rejected):"
+            chat_moderate_callback,
+            pattern=r"^chat:(approve|rejected):",
         )
     )
 
@@ -86,6 +87,7 @@ def main() -> None:
         application.run_webhook(
             listen="0.0.0.0",
             port=settings.webhook_port,
+            url_path=settings.webhook_path,
             webhook_url=f"{settings.webhook_url}/{settings.webhook_path}",
         )
     else:

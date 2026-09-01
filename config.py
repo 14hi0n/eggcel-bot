@@ -8,6 +8,8 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR / "data"
+DEFAULT_DATABASE_PATH = DATA_DIR / "database.db"
 
 
 class _Settings(BaseSettings):
@@ -36,7 +38,7 @@ class _Settings(BaseSettings):
     font_source: str = "assets/fonts/default/Oswald-Bold.ttf"
 
     # Etc
-    database_url: str = "sqlite+aiosqlite:///database.db"
+    database_url: str = f"sqlite+aiosqlite:///{DEFAULT_DATABASE_PATH}"
     log_to_file: bool = False
 
     @field_validator("admin_ids", mode="before")
