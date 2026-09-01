@@ -7,7 +7,7 @@ from PIL import Image
 from pydantic import BaseModel
 
 from config import settings
-from services.prompt_service import meme_caption_prompt
+from services.meme_prompt import meme_prompt_builder
 
 from .exceptions.gemini import (
     GeminiError,
@@ -104,7 +104,7 @@ async def generate_meme_caption(image: Image.Image) -> _OkResult | None:
     Returns:
         str: The generated meme caption.
     """
-    prompt = await meme_caption_prompt.get()
+    prompt = meme_prompt_builder.build()
 
     try:
         response = await _client.aio.models.generate_content(
@@ -149,7 +149,7 @@ async def generate_meme_caption(image: Image.Image) -> _OkResult | None:
 
     meme_data = response.parsed
 
-    if meme_data is None:
+    if not isinstance(meme_data, _MemeTextSchema):
         raise GeminiParseError(
             f"Could not parse Gemini response. finish_reason={candidate.finish_reason}"
         )

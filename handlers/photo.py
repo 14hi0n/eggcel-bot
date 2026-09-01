@@ -11,7 +11,7 @@ from database.models.chat import ChatStatus
 from database.repositories.chat import ChatRepository
 from helpers.telegram import download_photo
 from keyboards.approve import approve_chat_keyboard
-from services.admin_notifications import AdminNotifier
+from services.admin_notifier import AdminNotifier
 from services.chat_service import ChatService
 from services.exceptions.gemini import (
     GeminiError,

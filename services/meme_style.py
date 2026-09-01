@@ -1,27 +1,53 @@
 import logging
 import random
-
-from config import settings
-
-_STYLES = [
-    "Сделай эту подпись абсурдной и немного бессмысленной.",
-    "Сделай эту подпись сухой и невозмутимой.",
-    "Сделай эту подпись слегка агрессивной, но не своди её к простому оскорблению.",
-    "Сделай эту подпись неожиданно доброй.",
-    "Сделай эту подпись драматичной, будто произошло что-то очень серьёзное.",
-    "Сделай эту подпись максимально тупой, но естественной.",
-    "Сделай эту подпись слегка экзистенциальной.",
-    "Сделай эту подпись агрессивной.",
-]
-
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 
-def get_random_style() -> str | None:
-    if random.random() >= settings.meme_style_probability:
-        return None
+class MemeStyleSelector:
+    def __init__(self, path: Path, probability: float) -> None:
+        self._path = path
+        self._probability = probability
+        self._styles = self._load_style() if probability > 0 else ()
 
-    style = random.choice(_STYLES)
-    logger.info("A random caption style has been selected: %s", style)
-    return style
+    # def prepare(self) -> None:
+    #     if self._probability == 0:
+    #         self._styles = ()
+    #         logger.info("Meme style are disabled")
+    #         return
+
+    #     self._styles = self._load_style()
+
+    #     logger.info(
+    #         "Loaded %d meme style from %s",
+    #         len(self._styles),
+    #         self._path,
+    #     )
+
+    def get_random_style(self) -> str | None:
+        if self._probability == 0:
+            return None
+
+        if self._styles is None:
+            raise RuntimeError("MemeStyleService is not prepared")
+
+        if random.random() >= self._probability:
+            return None
+
+        style = random.choice(self._styles)
+        logger.debug("Selected meme style: %s", style)
+
+        return style
+
+    def _load_style(self) -> tuple[str, ...]:
+        styles = tuple(
+            line
+            for raw_line in self._path.read_text(encoding="utf-8").splitlines()
+            if (line := raw_line.strip()) and not line.startswith("#")
+        )
+
+        if not styles:
+            raise ValueError("No meme styles frond in %s", self._path)
+
+        return styles
