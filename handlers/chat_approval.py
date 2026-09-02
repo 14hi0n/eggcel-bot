@@ -50,7 +50,7 @@ async def chat_moderate_callback(
         service = ChatService(chat_repo=repo)
         if status == ChatStatus.approved:
             chat = await service.approve(chat_id=chat_id)
-            verdict = "Approvrd"
+            verdict = "Approved"
         elif status == ChatStatus.rejected:
             chat = await service.reject(chat_id=chat_id)
             verdict = "Rejected"

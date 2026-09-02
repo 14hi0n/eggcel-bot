@@ -7,7 +7,7 @@ def approve_chat_keyboard(chat_id: int) -> InlineKeyboardMarkup:
         [
             [
                 InlineKeyboardButton(
-                    text="Одобрить", callback_data=f"chat:approve:{chat_id}"
+                    text="Одобрить", callback_data=f"chat:approved:{chat_id}"
                 )
             ],
             [
