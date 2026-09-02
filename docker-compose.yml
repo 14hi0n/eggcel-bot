@@ -1,6 +1,8 @@
 services:
   eggcel-bot:
-    build: .
+    build:
+      context: .
+
     restart: unless-stopped
     env_file:
       - .env
@@ -14,3 +16,4 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+      
