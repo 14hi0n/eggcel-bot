@@ -187,14 +187,14 @@ async def handle_public_photo(
         repo = ChatRepository(session)
         service = ChatService(repo)
 
-        chat = await service.get_or_create(
+        result = await service.get_or_create(
             chat_id=chat_id,
             chat_type=tg_chat.type,
             chat_title=tg_chat.title,
             tag_name=tg_chat.username,
         )
 
-    if chat.is_created:
+    if result.is_created:
         logger.debug("New chat %s has been added to the DB", chat_id)
 
         notifier = AdminNotifier(context.bot, settings.admin_ids)
@@ -207,7 +207,7 @@ async def handle_public_photo(
 
         return
 
-    if chat.chat.status != ChatStatus.approved:
+    if result.chat.status != ChatStatus.approved:
         logger.debug("Chat %s was skipped without approval", chat_id)
         return
     # ===================================================
