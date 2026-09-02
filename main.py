@@ -18,6 +18,7 @@ from handlers.error import error_handler
 from handlers.photo import handle_private_photo, handle_public_photo
 from handlers.remove_chat import remove_chat
 from handlers.start import start
+from handlers.version import show_version
 from services.font_service import prepare_font
 from utils.logging_config import setup_logging
 
@@ -64,6 +65,13 @@ def main() -> None:
     )
     application.add_handler(CommandHandler("add", add_chat, filters=admin_filter))
     application.add_handler(CommandHandler("remove", remove_chat, filters=admin_filter))
+    application.add_handler(
+        CommandHandler(
+            ("version", "ver"),
+            show_version,
+            filters=admin_filter,
+        )
+    )
 
     application.add_handler(
         ChatMemberHandler(on_bot_added, ChatMemberHandler.MY_CHAT_MEMBER)
