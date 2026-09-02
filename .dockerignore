@@ -2,7 +2,6 @@
 .git
 .gitignore
 
-.env
 
 __pycache__
 *.pyc
@@ -15,3 +14,9 @@ bot.log
 .idea
 
 *.db
+assets/fonts/runtime/
+
+.env*
+assets/prompts/*.txt
+!assets/prompts/example.txt
+!assets/prompts/meme_style.txt
