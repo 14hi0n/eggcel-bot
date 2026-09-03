@@ -15,6 +15,7 @@ from database.manager import DatabaseManager
 from handlers.add_chat import add_chat
 from handlers.chat_approval import chat_moderate_callback, on_bot_added
 from handlers.error import error_handler
+from handlers.pending_chats import show_pending_chats
 from handlers.photo import handle_private_photo, handle_public_photo
 from handlers.remove_chat import remove_chat
 from handlers.start import start
@@ -66,8 +67,27 @@ def main() -> None:
     application.add_handler(
         CommandHandler("start", start, filters=filters.ChatType.PRIVATE)
     )
-    application.add_handler(CommandHandler("add", add_chat, filters=admin_filter))
-    application.add_handler(CommandHandler("remove", remove_chat, filters=admin_filter))
+    application.add_handler(
+        CommandHandler(
+            "add",
+            add_chat,
+            filters=admin_filter,
+        )
+    )
+    application.add_handler(
+        CommandHandler(
+            "remove",
+            remove_chat,
+            filters=admin_filter,
+        )
+    )
+    application.add_handler(
+        CommandHandler(
+            "pending",
+            show_pending_chats,
+            filters=admin_filter,
+        )
+    )
     application.add_handler(
         CommandHandler(
             ("version", "ver"),

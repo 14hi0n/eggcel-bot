@@ -1,5 +1,7 @@
 from telegram import Chat, Update
 
+from database.models.chat import Chat as DatabaseChat
+
 
 class AdminMessages:
     @staticmethod
@@ -14,6 +16,21 @@ class AdminMessages:
 
         if chat.username is not None:
             lines.append(f"Chat Username: @{chat.username}")
+
+        return "\n".join(lines)
+
+    @staticmethod
+    def pending_chat(chat: DatabaseChat) -> str:
+        lines = [
+            "Ожидает модерации",
+            "",
+            f"ID: {chat.chat_id}",
+            f"Chat Title: {chat.chat_title or '???'}\n",
+            f"Chat Type: {chat.chat_type}",
+        ]
+
+        if chat.tag_name is not None:
+            lines.append(f"Chat Username: @{chat.tag_name}")
 
         return "\n".join(lines)
 
