@@ -47,7 +47,10 @@ async def post_shutdown(application: Application) -> None:
 
 
 def main() -> None:
-    setup_logging(log_to_file=settings.log_to_file)
+    setup_logging(
+        log_to_file=settings.log_to_file,
+        console_level=settings.log_level,
+    )
 
     application = (
         ApplicationBuilder()

@@ -1,14 +1,23 @@
 import logging
+from enum import StrEnum
 from logging.handlers import RotatingFileHandler
 
 
-def setup_logging(*, log_to_file: bool) -> None:
+class LogLevel(StrEnum):
+    DEBUG = "DEBUG"
+    INFO = "INFO"
+    WARNING = "WARNING"
+    ERROR = "ERROR"
+    CRITICAL = "CRITICAL"
+
+
+def setup_logging(*, log_to_file: bool, console_level: LogLevel) -> None:
     formatter = logging.Formatter(
         "%(asctime)s | %(levelname)s | %(name)s | %(funcName)s | %(message)s"
     )
 
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
+    console_handler.setLevel(console_level.value)
     console_handler.setFormatter(formatter)
 
     handlers: list[logging.Handler] = [console_handler]

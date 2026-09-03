@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
+from utils.logging_config import LogLevel
+
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -40,6 +42,7 @@ class _Settings(BaseSettings):
 
     # Etc
     database_url: str = f"sqlite+aiosqlite:///{DEFAULT_DATABASE_PATH}"
+    log_level: LogLevel = LogLevel.INFO
     log_to_file: bool = False
 
     @field_validator("admin_ids", mode="before")
