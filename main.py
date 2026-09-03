@@ -86,7 +86,7 @@ def main() -> None:
     application.add_handler(
         CallbackQueryHandler(
             chat_moderate_callback,
-            pattern=r"^chat:(approve|rejected):",
+            pattern=r"^chat:(approved|rejected):",
         )
     )
 
