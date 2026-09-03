@@ -55,23 +55,37 @@ uv run python main.py
 
 ## Переменные окружения
 
-| Переменная                | Обязательная | По умолчанию                         | Назначение |
-|---                        |:---:    |---                                        |---         |
-| `TELEGRAM_BOT_TOKEN`      | **да**  | --                                        | Токен Telegram-бота |
-| `GEMINI_API_KEY`          | **да**  | --                                        | Ключ Gemini API |
-| `ADMIN_IDS`               | **нет** | пустой список                             | Telegram ID админов через запятую. Если не указывать, админ-команды и модерация будут недоступны |
-| `FONT_SOURCE`             | **нет** | `assets/fonts/default/Oswald-Bold.ttf`    | Путь к файлу или URL  [^font-source] |
-| `DATABASE_URL`            | **нет** | SQLite: `data/database.db`                | URL подключение к базе данных |
-| `GEMINI_MODEL`            | **нет** | `gemini-3.5-flash-lite`                   | Gemini модель |
-| `MEME_PROMPT_PATH`        | **нет** | `assets/prompts/example.txt`              | Промпт для генерации |
-| `MEME_STYLE_PATH`         | **нет** | `assets/prompts/meme_style.txt`           | Промпт-стили для генерации |
-| `MEME_PROBABILITY`        | **нет** | `0.1`                                     | Вероятность реакции в групповом чате |
-| `MEME_STYLE_PROBABILITY`  | **нет** | `0.33`                                    | Вероятность выбора стиля генерации. `0` для отключения [^meme-style-probability] |
-| `LOG_TO_FILE`             | **нет** | `False`                                   | Записывать ли локальный `bot.log` |
-| `WEBHOOK_URL`             | **нет** | не задано                                 | Публичный HTTPS-адрес. Если не задан, бот запускается через polling  |
-| `WEBHOOK_PORT`            | **нет** | `8080`                                    | Локальный порт, на котором приложение принимает webhook-запросы |
-| `WEBHOOK_PATH`            | **нет** | `telegram`                                | Путь webhook. Добавляется к `WEBHOOK_URL` |
+### Обязательные
 
+
+| Переменная                | Назначение |
+|---                        |---         |
+| `TELEGRAM_BOT_TOKEN`      | Токен Telegram-бота |
+| `GEMINI_API_KEY`          | Ключ Gemini API |
+
+### Настройки бота
+
+| Переменная                | По умолчанию                              | Назначение |
+|---                        |---                                        |---         |
+| `ADMIN_IDS`               | пустой список                             | Telegram ID админов через запятую. Если не указывать, админ-команды и модерация будут недоступны |
+| `FONT_SOURCE`             | `assets/fonts/default/Oswald-Bold.ttf`    | Путь к файлу или URL  [^font-source] |
+| `DATABASE_URL`            | SQLite: `data/database.db`                | URL подключение к базе данных |
+| `GEMINI_MODEL`            | `gemini-3.5-flash-lite`                   | Gemini модель |
+| `MEME_PROMPT_PATH`        | `assets/prompts/example.txt`              | Промпт для генерации |
+| `MEME_STYLE_PATH`         | `assets/prompts/meme_style.txt`           | Промпт-стили для генерации |
+| `MEME_PROBABILITY`        | `0.1`                                     | Вероятность реакции в групповом чате |
+| `MEME_STYLE_PROBABILITY`  | `0.33`                                    | Вероятность выбора стиля генерации. `0` для отключения [^meme-style-probability] |
+
+
+### Запуск и хранение
+
+| Переменная                | По умолчанию                              | Назначение |
+|---                        |---                                        |---         |
+| `WEBHOOK_URL`             | не задано                                 | Публичный HTTPS-адрес. Если не задан, бот запускается через polling  |
+| `WEBHOOK_PORT`            | `8080`                                    | Локальный порт, на котором приложение принимает webhook-запросы |
+| `WEBHOOK_PATH`            | `telegram`                                | Путь webhook. Добавляется к `WEBHOOK_URL` |
+| `LOG_LEVEL`               | `False`                                   | Уровень консольных логов: `DEBUG`, `INFO`, `WARNING`, `ERROR` или `CRITICAL` |
+| `LOG_TO_FILE`             | `False`                                   | Записывать ли локальный `bot.log` |
 
 [^font-source]: Из-за лицензионных ограничений я не могу оставить шрифт impact в самом репозитории.  
 В `FONT_SOURCE` можно указать относительный путь к шрифту, либо прямую ссылку на шрифт.  
