@@ -187,7 +187,7 @@ async def handle_public_photo(
         repo = ChatRepository(session)
         service = ChatService(repo)
 
-        result = await service.get_or_create(
+        result = await service.register_chat(
             chat_id=chat_id,
             chat_type=tg_chat.type,
             chat_title=tg_chat.title,

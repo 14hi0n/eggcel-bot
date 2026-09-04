@@ -10,7 +10,8 @@ from database.repositories.chat import ChatRepository
 from helpers.telegram import get_text_callback
 from keyboards.approve import approve_chat_keyboard
 from services.admin_notifier import AdminNotifier
-from services.chat_service import ChatService
+from services.chat_service import ChatActionOutcome, ChatService
+from services.exceptions.chat_service import ChatNotFoundError
 from texts.messages import AdminMessages
 
 logger = logging.getLogger(__name__)
@@ -19,12 +20,12 @@ logger = logging.getLogger(__name__)
 async def chat_moderate_callback(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    result = get_text_callback(update)
+    callback = get_text_callback(update)
 
-    if result is None:
+    if callback is None:
         return
 
-    query, message, data = result
+    query, message, data = callback
 
     user = update.effective_user
 
@@ -33,36 +34,57 @@ async def chat_moderate_callback(
         return
 
     try:
-        _, status_raw, chat_id_raw = data.split(":")
-        status = ChatStatus(status_raw)
+        _, new_status_raw, chat_id_raw = data.split(":")
+        new_status = ChatStatus(new_status_raw)
         chat_id = int(chat_id_raw)
     except ValueError, TypeError:
         logger.warning("Invalid callback data: %s", data)
         await query.answer("Что-то не то. Смотри логи", show_alert=True)
         return
 
-    logger.info(f"Нажал на {status_raw} в контексте id: {chat_id_raw}")
+    logger.info(f"Нажал на {new_status_raw} в контексте id: {chat_id_raw}")
 
     db: DatabaseManager = context.bot_data["db"]
 
-    async with db.session_factory() as session, session.begin():
-        repo = ChatRepository(session=session)
-        service = ChatService(chat_repo=repo)
-        if status == ChatStatus.approved:
-            chat = await service.approve(chat_id=chat_id)
-            verdict = "Approved"
-        elif status == ChatStatus.rejected:
-            chat = await service.reject(chat_id=chat_id)
-            verdict = "Rejected"
-        else:
-            return
+    try:
+        async with db.session_factory() as session, session.begin():
+            repo = ChatRepository(session=session)
+            service = ChatService(chat_repo=repo)
 
-    if chat is None:
-        await query.answer("Чат не найден в бд", show_alert=True)
+            result = await service.moderate_pending(
+                chat_id=chat_id,
+                new_status=new_status,
+            )
+    except ChatNotFoundError:
+        logger.warning("Chat %s was not found in the database", chat_id)
+        await query.answer("Чат не найден в БД", show_alert=True)
         return
 
-    await query.edit_message_text(f"{message.text}\n\n{verdict}")
-    await query.answer()
+    current_status = result.chat.status.value
+
+    match result.outcome:
+        case ChatActionOutcome.CHANGED:
+            verdict = f"Статус: {current_status}"
+            answer = "Статус изменен"
+            alert = False
+
+        case ChatActionOutcome.ALREADY_RESOLVED:
+            verdict = f"Заявка уже обработана\nТекущий статус: {current_status}"
+            answer = f"Уже обработано: {current_status}"
+            alert = True
+
+        case _:
+            logger.error(
+                "Unexpected moderation outcome: %s",
+                result.outcome,
+            )
+            await query.answer("Неожиданный результат", show_alert=True)
+            return
+
+    await query.answer(answer, show_alert=alert)
+    await query.edit_message_text(
+        f"{message.text}\n\n{verdict}",
+    )
 
 
 async def on_bot_added(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -100,7 +122,7 @@ async def on_bot_added(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         chat_repo = ChatRepository(session)
         chat_service = ChatService(chat_repo)
 
-        chat = await chat_service.get_or_create(
+        chat = await chat_service.register_chat(
             chat_id=tg_chat.id,
             chat_type=tg_chat.type,
             chat_title=tg_chat.title,

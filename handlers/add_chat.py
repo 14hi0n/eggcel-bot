@@ -6,7 +6,7 @@ from telegram.ext import ContextTypes
 
 from database.manager import DatabaseManager
 from database.repositories.chat import ChatRepository
-from services.chat_service import ChatService
+from services.chat_service import ChatActionOutcome, ChatService
 
 logger = logging.getLogger(__name__)
 
@@ -41,15 +41,26 @@ async def add_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         chat_repo = ChatRepository(session)
         chat_service = ChatService(chat_repo)
 
-        result = await chat_service.add_approved(
+        result = await chat_service.enable_chat(
             chat_id=tg_chat.id,
             chat_type=tg_chat.type,
             chat_title=tg_chat.title,
             tag_name=tg_chat.username,
         )
 
-    if result.is_created:
-        await message.reply_text(f"Добавлено как approved: {result.chat.chat_id}")
-        return
+    chat_id = result.chat.chat_id
 
-    await message.reply_text("Чат уже approve")
+    match result.outcome:
+        case ChatActionOutcome.CREATED:
+            text = f"Чат добавлен и одобрен: {chat_id}"
+
+        case ChatActionOutcome.CHANGED:
+            text = f"Чат одобрен: {chat_id}"
+
+        case ChatActionOutcome.UNCHANGED:
+            text = f"Чат уже одобрен: {chat_id}"
+
+        case _:
+            raise RuntimeError(f"Unexpected add-chat outcome: {result.outcome}")
+
+    await message.reply_text(text)

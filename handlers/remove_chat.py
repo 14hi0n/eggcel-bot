@@ -4,9 +4,8 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from database.manager import DatabaseManager
-from database.models.chat import ChatStatus
 from database.repositories.chat import ChatRepository
-from services.chat_service import ChatService
+from services.chat_service import ChatActionOutcome, ChatService
 from services.exceptions.chat_service import ChatNotFoundError
 
 logger = logging.getLogger(__name__)
@@ -37,15 +36,21 @@ async def remove_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             chat_repo = ChatRepository(session=session)
             chat_service = ChatService(chat_repo=chat_repo)
 
-            chat = await chat_service.set_status(
-                chat_id=chat_id,
-                status=ChatStatus.rejected,
-            )
+            result = await chat_service.disable_chat(chat_id=chat_id)
 
     except ChatNotFoundError:
-        logger.warning("Chat %s not found", chat_id)
+        logger.warning("Chat %s was not found in the database", chat_id)
         await message.reply_text("Нет в базе")
-
         return
 
-    await message.reply_text(f"Отключено: {chat.chat_id}")
+    match result.outcome:
+        case ChatActionOutcome.CHANGED:
+            text = f"Отключено: {chat_id}"
+
+        case ChatActionOutcome.UNCHANGED:
+            text = f"Чат уже отключен: {chat_id}"
+
+        case _:
+            raise RuntimeError(f"Unexpected remove-chat outcome: {result.outcome}")
+
+    await message.reply_text(text)

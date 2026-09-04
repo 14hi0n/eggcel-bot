@@ -1,6 +1,6 @@
 from typing import Optional, Sequence
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models.chat import Chat, ChatStatus
@@ -56,3 +56,23 @@ class ChatRepository:
     async def list_by_status(self, status: ChatStatus) -> Sequence[Chat]:
         result = await self.session.execute(select(Chat).where(Chat.status == status))
         return result.scalars().all()
+
+    async def compare_and_set_status(
+        self,
+        *,
+        chat_id: int,
+        expected_status: ChatStatus,
+        new_status: ChatStatus,
+    ) -> Chat | None:
+        statement = (
+            update(Chat)
+            .where(
+                Chat.chat_id == chat_id,
+                Chat.status == expected_status,
+            )
+            .values(status=new_status)
+            .returning(Chat)
+        )
+
+        result = await self.session.execute(statement)
+        return result.scalar_one_or_none()
