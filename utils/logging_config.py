@@ -40,7 +40,7 @@ def setup_logging(*, log_to_file: bool, console_level: LogLevel) -> None:
         force=True,
     )
 
-    for name in ("__main__", "main", "handlers", "services", "database"):
+    for name in ("__main__", "main", "helpers", "handlers", "services", "database"):
         logging.getLogger(name).setLevel(logging.DEBUG)
 
     logging.getLogger("telegram").setLevel(logging.WARNING)

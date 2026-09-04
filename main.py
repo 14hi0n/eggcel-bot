@@ -20,20 +20,21 @@ from handlers.photo import handle_private_photo, handle_public_photo
 from handlers.remove_chat import remove_chat
 from handlers.start import start
 from handlers.version import show_version
-from services.font_service import prepare_font
+from helpers.startup import log_startup_summary
+from services.font_service import get_font_path, prepare_font
 from utils.logging_config import setup_logging
 
 logger = logging.getLogger(__name__)
 
 
 async def post_init(application: Application) -> None:
-    logger.info("Application initialization started")
-
     await prepare_font()
 
     db = DatabaseManager(settings.database_url)
     application.bot_data["db"] = db
     await db.init()
+
+    log_startup_summary(font_path=get_font_path())
 
     logger.info("Application initialization completed")
 
@@ -114,7 +115,6 @@ def main() -> None:
     )
 
     if settings.webhook_url:
-        logger.info("%s BOT STARTING WITH WEBHOOK %s", "=" * 10, "=" * 10)
         application.run_webhook(
             listen="0.0.0.0",
             port=settings.webhook_port,
@@ -122,7 +122,6 @@ def main() -> None:
             webhook_url=f"{settings.webhook_url}/{settings.webhook_path}",
         )
     else:
-        logger.info("%s BOT STARTING WITH POLLING %s", "=" * 10, "=" * 10)
         application.run_polling()
 
 
