@@ -23,7 +23,7 @@ from services.exceptions.gemini import (
 from services.meme_service import create_meme
 from services.text_generator import generate_meme_caption
 from texts.messages import AdminMessages
-from utils.parse import parse_meme_caption
+from utils.parse import parse_user_caption
 
 logger = logging.getLogger(__name__)
 
@@ -139,21 +139,6 @@ async def _create_ai_meme(
 
         return None
 
-    if meme_data is None:
-        logger.error(
-            "Gemini meme data is None: chat_id=%s user_id=%s",
-            chat.id,
-            user.id if user else None,
-        )
-        error_text = AdminMessages.error(
-            update=update,
-            title="Gemini не смог сгенерить мем и вернул None",
-        )
-        await notifier.send(
-            text=error_text,
-        )
-        return None
-
     return await create_meme(
         image,
         meme_data.top_text,
@@ -265,7 +250,7 @@ async def handle_private_photo(
         return
 
     try:
-        top_text, bottom_text = parse_meme_caption(caption)
+        top_text, bottom_text = parse_user_caption(caption)
 
     except ValueError:
         logger.debug(

@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from enum import Enum
 from typing import Literal
 
@@ -7,7 +8,8 @@ from PIL import Image
 from pydantic import BaseModel
 
 from config import settings
-from services.meme_prompt import meme_prompt_builder
+from services.meme_prompt_builder import CAPTION_SPLIT_MARKER, meme_prompt_builder
+from utils.parse import parse_caption_with_marker
 
 from .exceptions.gemini import (
     GeminiError,
@@ -49,8 +51,7 @@ Gemini должен вернуть одну из двух форм.
 {
   "result": {
     "verdict": "OK",
-    "top_text": null,
-    "bottom_text": "КУДА Я ОПЯТЬ ПОПАЛ"
+    "caption": "ВЕРХНИЙ ТЕКСТ <SPLIT> НИЖНИЙ ТЕКСТ"
   }
 }
 
@@ -77,8 +78,7 @@ class _OkResult(BaseModel):
     """Результат успешной генерации."""
 
     verdict: Literal["OK"]
-    top_text: str | None = None
-    bottom_text: str
+    caption: str
 
 
 class _RejectResult(BaseModel):
@@ -94,15 +94,21 @@ class _MemeTextSchema(BaseModel):
     result: _OkResult | _RejectResult
 
 
-async def generate_meme_caption(image: Image.Image) -> _OkResult | None:
+@dataclass(frozen=True, slots=True)
+class MemeCaption:
+    top_text: str | None
+    bottom_text: str
+
+
+async def generate_meme_caption(image: Image.Image) -> MemeCaption:
     """
-    Generates a meme caption based on an image.
+     Генерирует текст для мема на основе изображения.
 
     Args:
-        image (Image.Image): The image for which to generate the caption.
+        image (Image.Image): Изображение для которого сгенерить текст.
 
     Returns:
-        str: The generated meme caption.
+        MemeCaption: Объект содержащий top_text и bottom_text.
     """
     prompt = meme_prompt_builder.build()
 
@@ -120,7 +126,7 @@ async def generate_meme_caption(image: Image.Image) -> _OkResult | None:
     except errors.ServerError as exc:
         if exc.code == 503:
             raise GeminiUnavailableError(
-                exc.message or "Gemini API unvailable."
+                exc.message or "Gemini API unavailable."
             ) from exc
         raise GeminiError(str(exc)) from exc
 
@@ -145,7 +151,7 @@ async def generate_meme_caption(image: Image.Image) -> _OkResult | None:
 
     # OUTPUT был остановлен фильтром
     if candidate.finish_reason == types.FinishReason.SAFETY:
-        raise GeminiOutputBlockedError(f"safity_rating={candidate.safety_ratings}")
+        raise GeminiOutputBlockedError(f"safety_ratings={candidate.safety_ratings}")
 
     meme_data = response.parsed
 
@@ -159,4 +165,14 @@ async def generate_meme_caption(image: Image.Image) -> _OkResult | None:
     if isinstance(result, _RejectResult):
         raise GeminiNSFWError(f"Gemini rejected input: {result.reason.value}")
 
-    return result
+    try:
+        top_text, bottom_text = parse_caption_with_marker(
+            result.caption, CAPTION_SPLIT_MARKER
+        )
+    except ValueError as exc:
+        raise GeminiParseError(str(exc)) from exc
+
+    return MemeCaption(
+        top_text=top_text,
+        bottom_text=bottom_text,
+    )

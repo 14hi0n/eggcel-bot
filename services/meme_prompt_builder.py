@@ -3,11 +3,17 @@ from pathlib import Path
 from config import settings
 from services.meme_style import MemeStyleSelector
 
+CAPTION_SPLIT_MARKER = "<SPLIT>"
 _REQUIRED_PROMPT = (
     "Если на изображении содержится порнография или обнажённая натура, "
     "верни verdict='REJECTED' и reason='NSFW'. "
     "Не создавай в этом случае подпись. "
-    "Во всех остальных случаях верни verdict='OK' и сгенерируй подпись."
+    "Во всех остальных случаях верни verdict='OK' и одну цельную подпись в caption. "
+    "Если подпись лучше разделить между верхней и нижней частью изображения, "
+    f"вставь маркер {CAPTION_SPLIT_MARKER} ровно в месте разделения. "
+    f"Текст до и после {CAPTION_SPLIT_MARKER} должен составлять одну цельную мысль, "
+    "а не две независимые подписи. "
+    f"Если разделение не нужно, не используй {CAPTION_SPLIT_MARKER}."
 )
 
 
