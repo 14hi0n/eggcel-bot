@@ -77,6 +77,7 @@ uv run python main.py
 | `MEME_STYLE_PATH`         | `assets/prompts/meme_style.txt`           | Промпт-стили для генерации |
 | `MEME_PROBABILITY`        | `0.1`                                     | Вероятность реакции в групповом чате |
 | `MEME_STYLE_PROBABILITY`  | `0.33`                                    | Вероятность выбора стиля генерации. `0` для отключения [^meme-style-probability] |
+| `MEME_SQUARE`             | `False`                                   | Делать ли итоговые картинки квадратными |
 
 
 ### Запуск и хранение

@@ -38,6 +38,7 @@ class _Settings(BaseSettings):
     meme_probability: float = Field(default=0.1, ge=0.0, le=1.0)
     meme_style_probability: float = Field(default=0.33, ge=0.0, le=1.0)
     meme_style_path: Path = Path(BASE_DIR / "assets/prompts/meme_style.txt")
+    meme_square: bool = False
     font_source: str = "assets/fonts/default/Oswald-Bold.ttf"
 
     # Etc

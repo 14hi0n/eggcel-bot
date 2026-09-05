@@ -140,7 +140,12 @@ def draw_text_lines(
         y += line_height if is_top else -line_height
 
 
-def render_meme_text(image: Image.Image, top: str | None, bottom: str) -> Image.Image:
+def render_meme_text(
+    image: Image.Image,
+    top: str | None,
+    bottom: str,
+    square: bool = False,
+) -> Image.Image:
     """
     Main function for generating a meme with text overlay.
 
@@ -156,7 +161,9 @@ def render_meme_text(image: Image.Image, top: str | None, bottom: str) -> Image.
         Image.Image: Image with meme text overlay.
     """
     image = image.convert("RGB")
-    image = to_square(image)
+
+    if square:
+        image = to_square(image)
 
     draw = ImageDraw.Draw(image)
     w, h = image.size

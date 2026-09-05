@@ -2,6 +2,7 @@ import asyncio
 
 from PIL import Image
 
+from config import settings
 from services.meme_renderer import compress_for_telegram, render_meme_text
 
 
@@ -27,6 +28,7 @@ def _render_and_compress(
         image,
         top_text,
         bottom_text,
+        square=settings.meme_square,
     )
 
     return compress_for_telegram(rendered_image)
