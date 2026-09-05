@@ -5,7 +5,7 @@ from typing import Literal
 from google import genai
 from google.genai import errors, types
 from PIL import Image
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from config import settings
 from services.meme_prompt_builder import CAPTION_SPLIT_MARKER, meme_prompt_builder
@@ -153,12 +153,26 @@ async def generate_meme_caption(image: Image.Image) -> MemeCaption:
     if candidate.finish_reason == types.FinishReason.SAFETY:
         raise GeminiOutputBlockedError(f"safety_ratings={candidate.safety_ratings}")
 
-    meme_data = response.parsed
+    raw_response = response.text
 
-    if not isinstance(meme_data, _MemeTextSchema):
+    if raw_response is None:
         raise GeminiParseError(
-            f"Could not parse Gemini response. finish_reason={candidate.finish_reason}"
+            "Gemini returned no text: "
+            f"finish_reason={candidate.finish_reason}, "
+            f"response_id={response.response_id}"
         )
+
+    try:
+        meme_data = _MemeTextSchema.model_validate_json(raw_response)
+    except ValidationError as exc:
+        raise GeminiParseError(
+            "Could not parse Gemini response: "
+            f"finish_reason={candidate.finish_reason}, "
+            f"response_id={response.response_id}, "
+            f"model_version={response.model_version}, "
+            f"errors={exc.errors(include_url=False)}, "
+            f"raw_response={raw_response[:500]!r}"
+        ) from exc
 
     result = meme_data.result
 

@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 async def post_init(application: Application) -> None:
+    logger.info("Application initialization started")
     await prepare_font()
 
     db = DatabaseManager(settings.database_url)
