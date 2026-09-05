@@ -16,6 +16,7 @@ def log_startup_summary(*, font_path: Path) -> None:
         ("Font source", settings.font_source),
         ("Font file", font_path.resolve()),
         ("Meme probability", f"{settings.meme_probability:.0%}"),
+        ("Meme style probability", f"{settings.meme_style_probability:.0%}"),
         ("Console log level", settings.log_level),
     )
 
