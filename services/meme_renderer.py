@@ -5,6 +5,7 @@ from PIL import Image, ImageDraw, ImageFont
 from services.font_service import get_font_path
 
 FONT_SIZE_RATIO = 0.10
+TEXT_MAX_HEIGHT_RATIO = 0.25
 
 
 def to_square(image: Image.Image) -> Image.Image:
@@ -169,7 +170,7 @@ def render_meme_text(
     w, h = image.size
 
     max_w = int(w * 0.92)
-    max_h = int(h * 0.40)
+    max_h = int(h * TEXT_MAX_HEIGHT_RATIO)
     padding = int(h * 0.02)
 
     start_size = max(int(h * FONT_SIZE_RATIO), 16)
