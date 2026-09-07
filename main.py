@@ -13,6 +13,7 @@ from telegram.ext import (
 from config import settings
 from database.manager import DatabaseManager
 from handlers.add_chat import add_chat
+from handlers.animation import handle_private_animation, handle_public_animation
 from handlers.chat_approval import chat_moderate_callback, on_bot_added
 from handlers.error import error_handler
 from handlers.pending_chats import show_pending_chats
@@ -21,7 +22,11 @@ from handlers.remove_chat import remove_chat
 from handlers.start import start
 from handlers.version import show_version
 from helpers.startup import log_startup_summary
+from services.animation_renderer import AnimationRenderer
+from services.animation_service import AnimationService
 from services.font_service import get_font_path, prepare_font
+from services.meme_renderer import render_text_overlay
+from services.text_generator import generate_meme_caption
 from utils.logging_config import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -33,6 +38,14 @@ async def post_init(application: Application) -> None:
 
     db = DatabaseManager(settings.database_url)
     application.bot_data["db"] = db
+
+    # TODO: по такому же принципу нужено реализовать PhotoService
+    # затем предавать через bot_data а не напрямую.
+    application.bot_data["animation_service"] = AnimationService(
+        AnimationRenderer(),
+        caption_gererator=generate_meme_caption,
+        overlay_renderer=render_text_overlay,
+    )
     await db.init()
 
     log_startup_summary(font_path=get_font_path())
@@ -106,6 +119,19 @@ def main() -> None:
     )
     application.add_handler(
         MessageHandler(filters.PHOTO & filters.ChatType.PRIVATE, handle_private_photo)
+    )
+
+    application.add_handler(
+        MessageHandler(
+            filters.ANIMATION & filters.ChatType.GROUPS,
+            handle_public_animation,
+        )
+    )
+    application.add_handler(
+        MessageHandler(
+            filters.ANIMATION & filters.ChatType.PRIVATE,
+            handle_private_animation,
+        )
     )
 
     application.add_handler(

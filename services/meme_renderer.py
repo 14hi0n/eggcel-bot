@@ -141,49 +141,108 @@ def draw_text_lines(
         y += line_height if is_top else -line_height
 
 
+# def render_meme_text(
+#     image: Image.Image,
+#     top: str | None,
+#     bottom: str,
+#     square: bool = False,
+# ) -> Image.Image:
+#     """
+#     Main function for generating a meme with text overlay.
+
+#     Takes an image, top text, and bottom text, then returns
+#     the image with the meme-style text applied.
+
+#     Args:
+#         image (Image.Image): Original Pillow image.
+#         top (str | None): Text displayed at the top.
+#         bottom (str): Text displayed at the bottom.
+
+#     Returns:
+#         Image.Image: Image with meme text overlay.
+#     """
+#     image = image.convert("RGB")
+
+#     if square:
+#         image = to_square(image)
+
+#     draw = ImageDraw.Draw(image)
+#     w, h = image.size
+
+#     max_w = int(w * 0.92)
+#     max_h = int(h * TEXT_MAX_HEIGHT_RATIO)
+#     padding = int(h * 0.02)
+
+#     start_size = max(int(h * FONT_SIZE_RATIO), 16)
+
+#     if top:
+#         font, lines = fit_text(top.upper(), max_w, max_h, start_size, draw)
+#         draw_text_lines(draw, lines, font, w, start_y=padding, is_top=True)
+
+#     font, lines = fit_text(bottom.upper(), max_w, max_h, start_size, draw)
+
+#     draw_text_lines(draw, lines, font, w, start_y=h - padding, is_top=False)
+
+#     return image
+
+
 def render_meme_text(
     image: Image.Image,
-    top: str | None,
-    bottom: str,
+    top_text: str | None,
+    bottom_text: str,
     square: bool = False,
 ) -> Image.Image:
-    """
-    Main function for generating a meme with text overlay.
-
-    Takes an image, top text, and bottom text, then returns
-    the image with the meme-style text applied.
-
-    Args:
-        image (Image.Image): Original Pillow image.
-        top (str | None): Text displayed at the top.
-        bottom (str): Text displayed at the bottom.
-
-    Returns:
-        Image.Image: Image with meme text overlay.
-    """
     image = image.convert("RGB")
 
     if square:
         image = to_square(image)
 
-    draw = ImageDraw.Draw(image)
-    w, h = image.size
+    with render_text_overlay(image.size, top_text, bottom_text) as overlay:
+        image.paste(overlay, (0, 0), mask=overlay)
+
+    return image
+
+
+def render_text_overlay(
+    size: tuple[int, int],
+    top_text: str | None,
+    bottom_text: str,
+) -> Image.Image:
+    """
+    Возвращает прозрачное RGBA изображение с подписью.
+    """
+    w, h = size
+    if w <= 0 or h <= 0:
+        raise ValueError("Overlay dimensions must be positive")
+
+    overlay = Image.new("RGBA", size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
 
     max_w = int(w * 0.92)
     max_h = int(h * TEXT_MAX_HEIGHT_RATIO)
     padding = int(h * 0.02)
-
     start_size = max(int(h * FONT_SIZE_RATIO), 16)
 
-    if top:
-        font, lines = fit_text(top.upper(), max_w, max_h, start_size, draw)
-        draw_text_lines(draw, lines, font, w, start_y=padding, is_top=True)
+    captions = (
+        (top_text, padding, True),
+        (bottom_text, h - padding, False),
+    )
 
-    font, lines = fit_text(bottom.upper(), max_w, max_h, start_size, draw)
+    for text, start_y, is_top in captions:
+        if not text:
+            continue
 
-    draw_text_lines(draw, lines, font, w, start_y=h - padding, is_top=False)
+        font, lines = fit_text(text.upper(), max_w, max_h, start_size, draw)
+        draw_text_lines(
+            draw,
+            lines,
+            font,
+            w,
+            start_y=start_y,
+            is_top=is_top,
+        )
 
-    return image
+    return overlay
 
 
 def compress_for_telegram(image: Image.Image) -> bytes:
