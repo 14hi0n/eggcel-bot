@@ -1,4 +1,5 @@
 import asyncio
+import json
 from contextlib import suppress
 from pathlib import Path
 
@@ -17,29 +18,65 @@ class AnimationRenderer:
         self._timeout = timeout
         self._semaphore = asyncio.Semaphore(max_parallel)
 
-    async def extract_frame(
-        self,
-        source: Path,
-        target: Path,
-        at: float,
-    ) -> None:
-        """
-        Сохраняет один кадр в PNG.
-        """
-        if at < 0:
-            raise ValueError("Frame timestamp must be non-negative")
+    async def extract_middle_frame(self, source: Path, target: Path) -> None:
+        """Сохраняет средний по номеру кадр анимации в PNG."""
+        async with self._semaphore:
+            process = await asyncio.create_subprocess_exec(
+                "ffprobe",
+                "-v",
+                "error",
+                "-select_streams",
+                "v:0",
+                "-count_frames",
+                "-show_entries",
+                "stream=nb_read_frames",
+                "-of",
+                "json",
+                str(source),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            communication = asyncio.create_task(process.communicate())
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    asyncio.shield(communication), timeout=self._timeout
+                )
+            except TimeoutError, asyncio.CancelledError:
+                with suppress(ProcessLookupError):
+                    process.kill()
+                await communication
+                raise
 
+        if process.returncode != 0:
+            details = stderr.decode(errors="replace")[-2000:]
+            raise RuntimeError(f"FFprobe failed: {details}")
+
+        try:
+            info = json.loads(stdout)
+            frame_count = int(info["streams"][0]["nb_read_frames"])
+        except (KeyError, IndexError, TypeError, ValueError) as exc:
+            raise RuntimeError("Could not determine video frame count") from exc
+
+        if frame_count < 1:
+            raise RuntimeError("Animation contains no video frames")
+
+        frame_index = frame_count // 2
         await self._run(
             "-i",
             str(source),
-            # "-ss",
-            # str(at),
             "-map",
             "0:v:0",
+            "-vf",
+            f"select=eq(n\\,{frame_index})",
             "-frames:v",
             "1",
+            "-fps_mode",
+            "vfr",
             str(target),
         )
+
+        if not target.is_file() or target.stat().st_size == 0:
+            raise RuntimeError("FFmpeg did not produce a preview frame")
 
     async def render(
         self,

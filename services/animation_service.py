@@ -5,9 +5,10 @@ from pathlib import Path
 from PIL import Image
 
 from services.animation_renderer import AnimationRenderer
+from services.meme_prompt_builder import MemePromptBuilder
 from services.text_generator import MemeCaption
 
-CaptionGenerator = Callable[[Image.Image], Awaitable[MemeCaption]]
+CaptionGenerator = Callable[[Image.Image, MemePromptBuilder], Awaitable[MemeCaption]]
 OverlayRenderer = Callable[[tuple[int, int], str | None, str], Image.Image]
 
 
@@ -17,6 +18,7 @@ class AnimationService:
         renderer: AnimationRenderer,
         caption_gererator: CaptionGenerator,
         overlay_renderer: OverlayRenderer,
+        prompt_builder: MemePromptBuilder,
         max_duration: float = 30,
     ) -> None:
         if not 0 < max_duration < float("inf"):
@@ -25,6 +27,7 @@ class AnimationService:
         self._renderer = renderer
         self._caption_gererator = caption_gererator
         self._overlay_renderer = overlay_renderer
+        self._prompt_builder = prompt_builder
         self._max_duration = max_duration
 
     async def create_meme(
@@ -42,14 +45,17 @@ class AnimationService:
         overlay = workdir / "overlay.png"
         result = workdir / "result.mp4"
 
-        await self._renderer.extract_frame(source, preview, at=duration / 2)
+        await self._renderer.extract_middle_frame(source, preview)
 
         with Image.open(preview) as image:
             await asyncio.to_thread(image.load)
 
             if caption is None:
                 # Eсли подпись не задана, значит нужно генерировать через нейронку.
-                caption = await self._caption_gererator(image)
+                caption = await self._caption_gererator(
+                    image,
+                    self._prompt_builder,
+                )
 
             # На основе превью получаем размер видео чтобы сделать оверлей
             size = image.size

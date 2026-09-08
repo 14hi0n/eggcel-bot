@@ -8,7 +8,7 @@ from PIL import Image
 from pydantic import BaseModel, ValidationError
 
 from config import settings
-from services.meme_prompt_builder import CAPTION_SPLIT_MARKER, meme_prompt_builder
+from services.meme_prompt_builder import CAPTION_SPLIT_MARKER, MemePromptBuilder
 from utils.parse import parse_caption_with_marker
 
 from .exceptions.gemini import (
@@ -100,7 +100,10 @@ class MemeCaption:
     bottom_text: str
 
 
-async def generate_meme_caption(image: Image.Image) -> MemeCaption:
+async def generate_meme_caption(
+    image: Image.Image,
+    prompt_builder: MemePromptBuilder,
+) -> MemeCaption:
     """
      Генерирует текст для мема на основе изображения.
 
@@ -110,7 +113,8 @@ async def generate_meme_caption(image: Image.Image) -> MemeCaption:
     Returns:
         MemeCaption: Объект содержащий top_text и bottom_text.
     """
-    prompt = meme_prompt_builder.build()
+
+    prompt = prompt_builder.build()
 
     try:
         response = await _client.aio.models.generate_content(
@@ -120,6 +124,8 @@ async def generate_meme_caption(image: Image.Image) -> MemeCaption:
                 response_mime_type="application/json",
                 response_schema=_MemeTextSchema,
                 safety_settings=_SAFETY_SETTINGS,
+                temperature=1.5,
+                top_p=0.95,
             ),
         )
 
