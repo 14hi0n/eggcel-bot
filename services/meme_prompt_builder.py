@@ -68,16 +68,29 @@ class MemePromptBuilder:
         # По сути собираем рецепт промпта из разных кусочков.
         recipe = [self._rng.choice(variants) for variants in self._parts]
 
-        blocks = [self._base]
-        if recipe:
-            # Если есть рецепт
-            recipe_text = "Для этой генерации используй следующий рецепт:\n"
-            recipe_text += "\n".join(f"- {item}" for item in recipe)
-            # Добалвяем рецепт в список
-            blocks.append(recipe_text)
+        blocks = [
+            f"## Обязательные правила\n{_OUTPUT_CONTRACT}",
+            f"## Базовые инструкции\n{self._base}",
+        ]
 
-        # В блоки добавляем системный промпт
-        blocks.append(_OUTPUT_CONTRACT)
+        if recipe:
+            conditions = "\n".join(
+                f"Условие {num}: {item}" for num, item in enumerate(recipe, start=1)
+            )
+
+            blocks.append(
+                "## Условия этой генерации\n"
+                "Все условия относятся к одной подписи. "
+                "Примени их совместно, не отвечай на каждое отдельно.\n"
+                f"{conditions}"
+            )
+
+        blocks.append(
+            "## Задача\n"
+            "Создай одну мем-подпись к переданному изображению, "
+            "если это разрешено обязательными правилами. "
+            "При противоречии инструкций приоритет имеют обязательные правила."
+        )
 
         # Теперь жойним все блоки в строку
         return "\n\n".join(blocks)
