@@ -12,11 +12,10 @@ def log_startup_summary(*, font_path: Path) -> None:
         ("Version", APP_VERSION),
         ("Mode", "webhook" if settings.webhook_url else "polling"),
         ("Gemini model", settings.gemini_model),
-        ("Prompt", settings.meme_prompt_path.resolve()),
+        ("Prompt directory", settings.meme_prompts_dir.resolve()),
         ("Font source", settings.font_source),
         ("Font file", font_path.resolve()),
         ("Meme probability", f"{settings.meme_probability:.0%}"),
-        ("Meme style probability", f"{settings.meme_style_probability:.0%}"),
         ("Console log level", settings.log_level),
     )
 

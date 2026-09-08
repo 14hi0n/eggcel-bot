@@ -1,10 +1,12 @@
+import logging
+import random
 from pathlib import Path
 
-from config import settings
-from services.meme_style import MemeStyleSelector
+logger = logging.getLogger(__name__)
 
 CAPTION_SPLIT_MARKER = "<SPLIT>"
-_REQUIRED_PROMPT = (
+
+_OUTPUT_CONTRACT = (
     "Если на изображении содержится порнография или обнажённая натура, "
     "верни verdict='REJECTED' и reason='NSFW'. "
     "Не создавай в этом случае подпись. "
@@ -16,51 +18,118 @@ _REQUIRED_PROMPT = (
     f"caption должен содержать ровно один маркер {CAPTION_SPLIT_MARKER}. "
     "Если подпись состоит из шести слов или меньше, разделение необязательно. "
     f"Ставь {CAPTION_SPLIT_MARKER} в естественном смысловом месте. "
-    "Текст до и после маркера должен составлять одну цельную мысль, "
-    "а не две независимые подписи. "
-    "Старайся распределять текст между верхней и нижней частью примерно равномерно, "
-    "если это не ломает естественную структуру фразы. "
+    "Текст до и после маркера должен составлять одну цельную мысль. "
     "Строго соблюдай заданную структуру ответа. "
-    "Не добавляй Markdown, блоки кода, пояснения, комментарии, префиксы, "
-    "суффиксы или любой другой текст вне требуемой структуры."
+    "Не добавляй Markdown, пояснения, комментарии или другой текст."
 )
 
 
-class MemeCaptionPromptBuilder:
-    def __init__(
-        self,
-        prompt_path: Path,
-        style_service: MemeStyleSelector,
-    ):
-        self._base_prompt = self._load_prompt(prompt_path)
-        self.loader = prompt_path
-        self.style_service = style_service
+class MemePromptBuilder:
+    def __init__(self, prompts_dir: Path, rng: random.Random | None = None) -> None:
+        """Сборщик промптов.
+
+        Args:
+            prompts_dir (Path): Директория промптов.
+            rng (random.Random | None, optional): Генератор случайных чисел.
+                Если не выбран, то используется обычный random.Random.
+                Это нужно для тестирования.
+        """
+        self._prompts_dir = prompts_dir
+        self._rng = rng or random.Random()
+
+        self._validate_directory()
+
+        # base.txt обязательный.
+        base_lines = self._read_lines("base.txt")
+        self._base = "\n".join(base_lines)
+
+        # Поиск файлов вида part1.txt, part2.txt и тд.
+        part_paths = [
+            path
+            for path in self._prompts_dir.glob("part*.txt")
+            # Только если это файл и есть порядковый номер.
+            if path.is_file() and path.stem[4:].isdecimal()
+        ]
+        # Сортировка part-файла по его порадковому номеру
+        part_paths.sort(key=lambda path: int(path.stem[4:]))
+
+        # Читаем каждый parts и записываем в список list[list[str]]
+        self._parts = [self._read_lines(path.name) for path in part_paths]
+
+        logger.info(
+            "Prompt set loaded: directory=%s, parts=%d",
+            self._prompts_dir,
+            len(self._parts),
+        )
 
     def build(self) -> str:
-        parts = [self._base_prompt]
-        style = self.style_service.get_random_style()
 
-        if style is not None:
-            parts.append(style)
+        # Проходимся по каждому parts и берем из них по одному варианту промпта.
+        # По сути собираем рецепт промпта из разных кусочков.
+        recipe = [self._rng.choice(variants) for variants in self._parts]
 
-        parts.append(_REQUIRED_PROMPT)
+        blocks = [self._base]
+        if recipe:
+            # Если есть рецепт
+            recipe_text = "Для этой генерации используй следующий рецепт:\n"
+            recipe_text += "\n".join(f"- {item}" for item in recipe)
+            # Добалвяем рецепт в список
+            blocks.append(recipe_text)
 
-        return "\n\n".join(parts)
+        # В блоки добавляем системный промпт
+        blocks.append(_OUTPUT_CONTRACT)
+
+        # Теперь жойним все блоки в строку
+        return "\n\n".join(blocks)
+
+    def _validate_directory(self) -> None:
+        """Валидирует директорию с промптами.
+
+        Raises:
+            ValueError: Если директория некорректна
+                или отсутствует обязательный base.txt
+        """
+        if not self._prompts_dir.is_dir():
+            # Если указаная промпт-директория не директория
+            raise ValueError(f"Prompts directory does not exist: {self._prompts_dir}")
+        if not (self._prompts_dir / "base.txt").is_file():
+            # Если base.txt не файл
+            raise ValueError(
+                f"Required prompt file missing: {self._prompts_dir / 'base.txt'}"
+            )
+
+    def _read_lines(self, filename: str) -> list[str]:
+        """Читает содержимое промпт-файла построчно.
+
+        Args:
+            filename (str): Имя файла.
+
+        Raises:
+            ValueError: Если файл не содержит ни одной промпт-строки.
+
+        Returns:
+            list[str]: Список промпт-строк.
+        """
+
+        path = self._prompts_dir / filename
+
+        text = path.read_text(encoding="utf-8")
+        lines = text.splitlines()
+
+        items: list[str] = []
+
+        for line in lines:
+            # Пропускаем пустые строки и строки комментариев
+            if not line.strip() or self._is_comment(line):
+                continue
+
+            items.append(line.strip())
+
+        if not items:
+            raise ValueError(f"Prompt file contains no entries: {path}")
+
+        return items
 
     @staticmethod
-    def _load_prompt(path: Path) -> str:
-        prompt = path.read_text(encoding="utf-8").strip()
-
-        if not prompt:
-            raise ValueError("Prompt file is empty: %s", path)
-
-        return prompt
-
-
-meme_prompt_builder = MemeCaptionPromptBuilder(
-    prompt_path=settings.meme_prompt_path,
-    style_service=MemeStyleSelector(
-        path=settings.meme_style_path,
-        probability=settings.meme_style_probability,
-    ),
-)
+    def _is_comment(line: str) -> bool:
+        return line.lstrip().startswith("#")

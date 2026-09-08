@@ -52,7 +52,9 @@ Thumbs.db
 # Assets & Fonts
 # ==========================================
 assets/fonts/runtime
-assets/prompts/*.txt
-!assets/prompts/example.txt
-!assets/prompts/meme_style.txt
+
+/assets/prompts/*
+!/assets/prompts/example/
+/assets/prompts__backup/
+
 *.db

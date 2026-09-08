@@ -17,6 +17,7 @@ bot.log
 assets/fonts/runtime/
 
 .env*
-assets/prompts/*.txt
-!assets/prompts/example.txt
-!assets/prompts/meme_style.txt
+
+/assets/prompts/*
+!/assets/prompts/example/
+/assets/prompts__backup/

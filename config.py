@@ -34,10 +34,8 @@ class _Settings(BaseSettings):
     gemini_model: str = "gemini-3.5-flash-lite"
 
     # Meme
-    meme_prompt_path: Path = Path(BASE_DIR / "assets/prompts/example.txt")
+    meme_prompts_dir: Path = BASE_DIR / "assets/prompts/example"
     meme_probability: float = Field(default=0.1, ge=0.0, le=1.0)
-    meme_style_probability: float = Field(default=0.33, ge=0.0, le=1.0)
-    meme_style_path: Path = Path(BASE_DIR / "assets/prompts/meme_style.txt")
     meme_square: bool = False
     font_source: str = "assets/fonts/default/Oswald-Bold.ttf"
 
@@ -45,6 +43,14 @@ class _Settings(BaseSettings):
     database_url: str = f"sqlite+aiosqlite:///{DEFAULT_DATABASE_PATH}"
     log_level: LogLevel = LogLevel.INFO
     log_to_file: bool = False
+
+    @field_validator("meme_prompts_dir")
+    @classmethod
+    def normalize_prompts_dir(cls, value: Path) -> Path:
+        if not value.is_absolute():
+            value = BASE_DIR / value
+
+        return value
 
     @field_validator("admin_ids", mode="before")
     @classmethod

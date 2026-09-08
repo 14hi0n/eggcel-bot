@@ -20,6 +20,7 @@ from services.exceptions.gemini import (
     GeminiOutputBlockedError,
     GeminiUnavailableError,
 )
+from services.meme_prompt_builder import MemePromptBuilder
 from services.meme_service import create_meme
 from services.text_generator import generate_meme_caption
 from texts.messages import AdminMessages
@@ -43,9 +44,9 @@ async def _create_ai_meme(
         return
 
     notifier = AdminNotifier(context.bot, settings.admin_ids)
-
+    prompt_builder: MemePromptBuilder = context.bot_data["meme_prompt_builder"]
     try:
-        meme_data = await generate_meme_caption(image)
+        meme_data = await generate_meme_caption(image, prompt_builder=prompt_builder)
 
     except GeminiUnavailableError as exc:
         logger.warning(

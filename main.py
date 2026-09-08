@@ -22,6 +22,7 @@ from handlers.start import start
 from handlers.version import show_version
 from helpers.startup import log_startup_summary
 from services.font_service import get_font_path, prepare_font
+from services.meme_prompt_builder import MemePromptBuilder
 from utils.logging_config import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -34,6 +35,10 @@ async def post_init(application: Application) -> None:
     db = DatabaseManager(settings.database_url)
     application.bot_data["db"] = db
     await db.init()
+
+    application.bot_data["meme_prompt_builder"] = MemePromptBuilder(
+        prompts_dir=settings.meme_prompts_dir
+    )
 
     log_startup_summary(font_path=get_font_path())
 
