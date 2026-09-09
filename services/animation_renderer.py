@@ -114,6 +114,10 @@ class AnimationRenderer:
             "filter",
             "-movflags",
             "+faststart",
+            "-bf",
+            "0",
+            "-use_editlist",
+            "0",
             str(target),
         )
 
