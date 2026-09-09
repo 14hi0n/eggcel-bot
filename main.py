@@ -42,7 +42,10 @@ async def post_init(application: Application) -> None:
 
     await db.init()
 
-    prompt_builder = MemePromptBuilder(prompts_dir=settings.meme_prompts_dir)
+    prompt_builder = MemePromptBuilder(
+        prompts_dir=settings.meme_prompts_dir,
+        event_probability=settings.meme_event_probability,
+    )
 
     application.bot_data["meme_prompt_builder"] = prompt_builder
 

@@ -25,7 +25,12 @@ _OUTPUT_CONTRACT = (
 
 
 class MemePromptBuilder:
-    def __init__(self, prompts_dir: Path, rng: random.Random | None = None) -> None:
+    def __init__(
+        self,
+        prompts_dir: Path,
+        event_probability: float = 0.1,
+        rng: random.Random | None = None,
+    ) -> None:
         """Сборщик промптов.
 
         Args:
@@ -35,6 +40,7 @@ class MemePromptBuilder:
                 Это нужно для тестирования.
         """
         self._prompts_dir = prompts_dir
+        self._event_probability = event_probability
         self._rng = rng or random.Random()
 
         self._validate_directory()
@@ -42,6 +48,13 @@ class MemePromptBuilder:
         # base.txt обязательный.
         base_lines = self._read_lines("base.txt")
         self._base = "\n".join(base_lines)
+
+        # Если есть эвенты
+        events_path = self._prompts_dir / "events.txt"
+        self._events: list[str] = []
+        if events_path.is_file():
+            # Если есть файл с эвентами, читаем и записываем
+            self._events = self._read_lines("events.txt")
 
         # Поиск файлов вида part1.txt, part2.txt и тд.
         part_paths = [
@@ -67,6 +80,9 @@ class MemePromptBuilder:
         # Проходимся по каждому parts и берем из них по одному варианту промпта.
         # По сути собираем рецепт промпта из разных кусочков.
         recipe = [self._rng.choice(variants) for variants in self._parts]
+
+        if self._events and self._rng.random() < self._event_probability:
+            recipe.append(self._rng.choice(self._events))
 
         blocks = [
             f"## Обязательные правила\n{_OUTPUT_CONTRACT}",
