@@ -73,6 +73,7 @@ uv run python main.py
 | `FONT_SOURCE`             | `assets/fonts/default/Oswald-Bold.ttf`    | Путь к файлу или URL [^font-source] |
 | `DATABASE_URL`            | SQLite: `data/database.db`                | URL подключение к базе данных |
 | `GEMINI_MODEL`            | `gemini-3.5-flash-lite`                   | Gemini модель |
+| `GEMINI_TEMPERATURE`      | `1.0`                                     | Температура модели. [Гугл рекомендует](https://ai.google.dev/gemini-api/docs/gemini-3#temperature) оставлять значение на дефолтном `1.0` |
 | `MEME_PROMPTS_DIR`        | `assets/prompts/example/`                 | Путь к директории с набором промптов [^meme-prompts-dir] |
 | `MEME_PROBABILITY`        | `0.1`                                     | Вероятность реакции в групповом чате |
 | `MEME_SQUARE`             | `False`                                   | Делать ли итоговые картинки квадратными |

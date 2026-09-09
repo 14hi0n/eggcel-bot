@@ -124,8 +124,7 @@ async def generate_meme_caption(
                 response_mime_type="application/json",
                 response_schema=_MemeTextSchema,
                 safety_settings=_SAFETY_SETTINGS,
-                temperature=1.5,
-                top_p=0.95,
+                temperature=settings.gemini_temperature,
             ),
         )
 

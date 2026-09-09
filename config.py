@@ -32,6 +32,7 @@ class _Settings(BaseSettings):
     # Gemini
     gemini_api_key: str
     gemini_model: str = "gemini-3.5-flash-lite"
+    gemini_temperature: float = 1.0
 
     # Meme
     meme_prompts_dir: Path = BASE_DIR / "assets/prompts/example"
