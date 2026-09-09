@@ -78,6 +78,7 @@ def main() -> None:
     application = (
         ApplicationBuilder()
         .token(settings.telegram_bot_token)
+        .concurrent_updates(4)
         .post_init(post_init)
         .post_shutdown(post_shutdown)
         .build()
