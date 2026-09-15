@@ -1,6 +1,9 @@
 import logging
 import random
+from collections.abc import Mapping
 from pathlib import Path
+
+from services.prompt_template_renderer import PromptTemplateRenderer
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +31,7 @@ class MemePromptBuilder:
     def __init__(
         self,
         prompts_dir: Path,
+        template_renderer: PromptTemplateRenderer,
         event_probability: float = 0.1,
         rng: random.Random | None = None,
     ) -> None:
@@ -41,6 +45,7 @@ class MemePromptBuilder:
         """
         self._prompts_dir = prompts_dir
         self._event_probability = event_probability
+        self._template_renderer = template_renderer
         self._rng = rng or random.Random()
 
         self._validate_directory()
@@ -52,6 +57,7 @@ class MemePromptBuilder:
         # Если есть эвенты
         events_path = self._prompts_dir / "events.txt"
         self._events: list[str] = []
+
         if events_path.is_file():
             # Если есть файл с эвентами, читаем и записываем
             self._events = self._read_lines("events.txt")
@@ -75,14 +81,20 @@ class MemePromptBuilder:
             len(self._parts),
         )
 
-    def build(self) -> str:
+    def build(
+        self,
+        template_values: Mapping[str, str | None],
+    ) -> str:
 
         # Проходимся по каждому parts и берем из них по одному варианту промпта.
         # По сути собираем рецепт промпта из разных кусочков.
         recipe = [self._rng.choice(variants) for variants in self._parts]
 
         if self._events and self._rng.random() < self._event_probability:
-            recipe.append(self._rng.choice(self._events))
+            event = self._choose_event(template_values)
+
+            if event is not None:
+                recipe.append(event)
 
         blocks = [
             f"## Обязательные правила\n{_OUTPUT_CONTRACT}",
@@ -108,7 +120,6 @@ class MemePromptBuilder:
             "При противоречии инструкций приоритет имеют обязательные правила."
         )
 
-        # Теперь жойним все блоки в строку
         return "\n\n".join(blocks)
 
     def _validate_directory(self) -> None:
@@ -158,6 +169,37 @@ class MemePromptBuilder:
             raise ValueError(f"Prompt file contains no entries: {path}")
 
         return items
+
+    def _choose_event(
+        self,
+        template_values: Mapping[str, str | None],
+    ) -> str | None:
+        """Отсекает эвенты на основе переденых значений шаблонизатора.
+
+        Например, если выпал эвент требующий user,
+        но user == None тогда конкртеная строка промпта отсекается.
+
+        Args:
+            template_values (Mapping[str, str  |  None]): Обьект шаблонов.
+
+        Returns:
+            str | None: Возвращает случайный промпт из event.txt, либо None.
+        """
+        available: list[str] = []
+
+        for event in self._events:
+            rendered = self._template_renderer.render(
+                raw_text=event,
+                values=template_values,
+            )
+
+            if rendered is not None:
+                available.append(rendered)
+
+        if available is None:
+            return None
+
+        return self._rng.choice(available)
 
     @staticmethod
     def _is_comment(line: str) -> bool:

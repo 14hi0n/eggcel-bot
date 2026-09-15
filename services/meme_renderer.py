@@ -5,7 +5,7 @@ from PIL import Image, ImageDraw, ImageFont
 from services.font_service import get_font_path
 
 FONT_SIZE_RATIO = 0.10
-TEXT_MAX_HEIGHT_RATIO = 0.25
+TEXT_MAX_HEIGHT_RATIO = 0.40
 
 
 def to_square(image: Image.Image) -> Image.Image:
@@ -141,51 +141,6 @@ def draw_text_lines(
         y += line_height if is_top else -line_height
 
 
-# def render_meme_text(
-#     image: Image.Image,
-#     top: str | None,
-#     bottom: str,
-#     square: bool = False,
-# ) -> Image.Image:
-#     """
-#     Main function for generating a meme with text overlay.
-
-#     Takes an image, top text, and bottom text, then returns
-#     the image with the meme-style text applied.
-
-#     Args:
-#         image (Image.Image): Original Pillow image.
-#         top (str | None): Text displayed at the top.
-#         bottom (str): Text displayed at the bottom.
-
-#     Returns:
-#         Image.Image: Image with meme text overlay.
-#     """
-#     image = image.convert("RGB")
-
-#     if square:
-#         image = to_square(image)
-
-#     draw = ImageDraw.Draw(image)
-#     w, h = image.size
-
-#     max_w = int(w * 0.92)
-#     max_h = int(h * TEXT_MAX_HEIGHT_RATIO)
-#     padding = int(h * 0.02)
-
-#     start_size = max(int(h * FONT_SIZE_RATIO), 16)
-
-#     if top:
-#         font, lines = fit_text(top.upper(), max_w, max_h, start_size, draw)
-#         draw_text_lines(draw, lines, font, w, start_y=padding, is_top=True)
-
-#     font, lines = fit_text(bottom.upper(), max_w, max_h, start_size, draw)
-
-#     draw_text_lines(draw, lines, font, w, start_y=h - padding, is_top=False)
-
-#     return image
-
-
 def render_meme_text(
     image: Image.Image,
     top_text: str | None,
@@ -218,10 +173,12 @@ def render_text_overlay(
     overlay = Image.new("RGBA", size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
 
+    ref_dim = min(w, h)
+
     max_w = int(w * 0.92)
     max_h = int(h * TEXT_MAX_HEIGHT_RATIO)
     padding = int(h * 0.02)
-    start_size = max(int(h * FONT_SIZE_RATIO), 16)
+    start_size = max(int(ref_dim * FONT_SIZE_RATIO), 16)
 
     captions = (
         (top_text, padding, True),

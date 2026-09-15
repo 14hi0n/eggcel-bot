@@ -7,13 +7,13 @@ class PromptTemplateRenderer:
 
     def render(
         self,
-        row_text: str,
+        raw_text: str,
         values: Mapping[str, str | None],
     ) -> str | None:
         """Подставляет значения в шаблон текста.
 
         Args:
-            row_text (str): Исходный текст с шаблонами вида {{ name }}.
+            raw_text (str): Исходный текст с шаблонами вида {{ name }}.
             values (Mapping[str, str  |  None]): Сопостовление имен шаблонов
                 с их значениями.
 
@@ -23,7 +23,7 @@ class PromptTemplateRenderer:
         """
         names = set()
 
-        for name in self._token.findall(row_text):
+        for name in self._token.findall(raw_text):
             names.add(name.lower())
 
         unknown = names - values.keys()
@@ -31,12 +31,12 @@ class PromptTemplateRenderer:
         if unknown:
             raise ValueError(f"Unknown placeholder: {sorted(unknown)}")
 
-        for name in values:
+        for name in names:
             if not values[name]:
                 return None
 
         result = self._token.sub(
-            lambda match: values[match.group(1).lower()] or "", row_text
+            lambda match: values[match.group(1).lower()] or "", raw_text
         )
 
         return result

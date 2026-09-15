@@ -1,3 +1,4 @@
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from enum import Enum
 from typing import Literal
@@ -8,8 +9,9 @@ from PIL import Image
 from pydantic import BaseModel, ValidationError
 
 from config import settings
-from services.meme_prompt_builder import CAPTION_SPLIT_MARKER, MemePromptBuilder
+from services.meme_prompt_builder import CAPTION_SPLIT_MARKER
 from utils.parse import parse_caption_with_marker
+from utils.text import normalize_impact_meme
 
 from .exceptions.gemini import (
     GeminiError,
@@ -100,9 +102,15 @@ class MemeCaption:
     bottom_text: str
 
 
+CaptionGenerator = Callable[
+    [Image.Image, str],
+    Awaitable[MemeCaption],
+]
+
+
 async def generate_meme_caption(
     image: Image.Image,
-    prompt_builder: MemePromptBuilder,
+    prompt: str,
 ) -> MemeCaption:
     """
      Генерирует текст для мема на основе изображения.
@@ -113,8 +121,6 @@ async def generate_meme_caption(
     Returns:
         MemeCaption: Объект содержащий top_text и bottom_text.
     """
-
-    prompt = prompt_builder.build()
 
     try:
         response = await _client.aio.models.generate_content(
@@ -188,6 +194,14 @@ async def generate_meme_caption(
         top_text, bottom_text = parse_caption_with_marker(
             result.caption, CAPTION_SPLIT_MARKER
         )
+
+        if top_text is not None:
+            top_text = normalize_impact_meme(top_text)
+
+        bottom_text = normalize_impact_meme(bottom_text)
+
+        if top_text == "" or not bottom_text:
+            raise ValueError("Caption us empty after normalization")
     except ValueError as exc:
         raise GeminiParseError(str(exc)) from exc
 

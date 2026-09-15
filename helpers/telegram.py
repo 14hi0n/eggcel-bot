@@ -28,3 +28,31 @@ def get_text_callback(update: Update) -> tuple[CallbackQuery, Message, str] | No
         return None
 
     return query, message, query.data
+
+
+def get_prompt_template_values(message: Message) -> dict[str, str | None]:
+    """Собирает и возвращает обьект необходимый для шаблонизатора.
+
+    Args:
+        message (Message): _description_
+
+    Returns:
+        dict[str, str | None]: _description_
+    """
+
+    user = message.from_user
+    sender_chat = message.sender_chat
+    chat = message.chat
+
+    return {
+        "user": user.full_name if user is not None else None,
+        "username": user.username
+        if user is not None and user.username is not None
+        else None,
+        "chat": chat.title,
+        "chat_username": chat.username if chat.username is not None else None,
+        "sender": sender_chat.title if sender_chat is not None else None,
+        "sender_username": sender_chat.username
+        if sender_chat is not None and sender_chat.username is not None
+        else None,
+    }

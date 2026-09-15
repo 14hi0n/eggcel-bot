@@ -11,12 +11,13 @@ from config import settings
 from database.manager import DatabaseManager
 from database.models.chat import ChatStatus
 from database.repositories.chat import ChatRepository
+from helpers.telegram import get_prompt_template_values
 from keyboards.approve import approve_chat_keyboard
 from services.admin_notifier import AdminNotifier
 from services.animation_service import AnimationService
 from services.chat_service import ChatService
 from services.exceptions.gemini import GeminiError
-from services.text_generator import MemeCaption
+from services.gemini_caption_generator import MemeCaption
 from texts.messages import AdminMessages
 from utils.parse import parse_user_caption
 
@@ -46,6 +47,7 @@ async def _render_and_reply(
     chat_id = message.chat.id
     message_id = message.message_id
     mode = "ai" if caption is None else "custom"
+    template_values = get_prompt_template_values(message) if caption is None else {}
 
     is_private = message.chat.type == "private"
     file_size = animation.file_size
@@ -121,7 +123,8 @@ async def _render_and_reply(
             # после скачивания мы можем вычислить его.
             if len(data_bytes) > _MAX_INPUT_FILE_SIZE:
                 logger.debug(
-                    "Downloaded animation exceeds limit: chat_id=%s message_id=%s bytes=%s",
+                    "Downloaded animation exceeds limit: "
+                    "chat_id=%s message_id=%s bytes=%s",
                     chat_id,
                     message_id,
                     len(data_bytes),
@@ -151,6 +154,7 @@ async def _render_and_reply(
                 workdir=workdir,
                 duration=seconds,
                 caption=caption,
+                template_values=template_values,
             )
 
             # Проверяет размер видео ПЕРЕД отправкой

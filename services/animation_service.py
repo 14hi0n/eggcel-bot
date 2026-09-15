@@ -1,14 +1,13 @@
 import asyncio
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 
 from PIL import Image
 
 from services.animation_renderer import AnimationRenderer
+from services.gemini_caption_generator import CaptionGenerator, MemeCaption
 from services.meme_prompt_builder import MemePromptBuilder
-from services.text_generator import MemeCaption
 
-CaptionGenerator = Callable[[Image.Image, MemePromptBuilder], Awaitable[MemeCaption]]
 OverlayRenderer = Callable[[tuple[int, int], str | None, str], Image.Image]
 
 
@@ -37,6 +36,7 @@ class AnimationService:
         workdir: Path,
         duration: float,
         caption: MemeCaption | None = None,
+        template_values: Mapping[str, str | None],
     ) -> Path:
         if not 0 < duration <= self._max_duration:
             raise ValueError("Animation duration is outside the allowed range")
@@ -52,9 +52,10 @@ class AnimationService:
 
             if caption is None:
                 # Eсли подпись не задана, значит нужно генерировать через нейронку.
+                prompt = self._prompt_builder.build(template_values=template_values)
                 caption = await self._caption_gererator(
                     image,
-                    self._prompt_builder,
+                    prompt,
                 )
 
             # На основе превью получаем размер видео чтобы сделать оверлей

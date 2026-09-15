@@ -25,9 +25,11 @@ from helpers.startup import log_startup_summary
 from services.animation_renderer import AnimationRenderer
 from services.animation_service import AnimationService
 from services.font_service import get_font_path, prepare_font
+from services.gemini_caption_generator import generate_meme_caption
 from services.meme_prompt_builder import MemePromptBuilder
 from services.meme_renderer import render_text_overlay
-from services.text_generator import generate_meme_caption
+from services.photo_service import PhotoService
+from services.prompt_template_renderer import PromptTemplateRenderer
 from utils.logging_config import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -44,13 +46,16 @@ async def post_init(application: Application) -> None:
 
     prompt_builder = MemePromptBuilder(
         prompts_dir=settings.meme_prompts_dir,
+        template_renderer=PromptTemplateRenderer(),
         event_probability=settings.meme_event_probability,
     )
 
     application.bot_data["meme_prompt_builder"] = prompt_builder
 
-    # TODO: по такому же принципу нужено реализовать PhotoService
-    # затем предавать через bot_data а не напрямую.
+    application.bot_data["photo_service"] = PhotoService(
+        caption_generator=generate_meme_caption,
+        prompt_builder=prompt_builder,
+    )
     application.bot_data["animation_service"] = AnimationService(
         AnimationRenderer(),
         caption_gererator=generate_meme_caption,

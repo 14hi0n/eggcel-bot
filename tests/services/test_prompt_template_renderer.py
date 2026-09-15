@@ -7,7 +7,7 @@ def test_render_replaces_placeholder():
     renderer = PromptTemplateRenderer()
 
     result = renderer.render(
-        row_text="Hello my username is {{username}}",
+        raw_text="Hello my username is {{username}}",
         values={"username": "@pupupue"},
     )
 
@@ -18,7 +18,7 @@ def test_render_replaces_multiple_placeholders():
     renderer = PromptTemplateRenderer()
 
     result = renderer.render(
-        row_text="{{greating}} 私の名前は{{ name }}です。天気が{{ weather }}ですね。",
+        raw_text="{{greating}} 私の名前は{{ name }}です。天気が{{ weather }}ですね。",
         values={
             "greating": "おはよう〜",
             "name": "重音テト",
@@ -33,7 +33,7 @@ def test_render_replaces_repeated_placeholder():
     renderer = PromptTemplateRenderer()
 
     result = renderer.render(
-        row_text="{{ egg }}が大好きなので、毎日{{ egg }}を食べています。",
+        raw_text="{{ egg }}が大好きなので、毎日{{ egg }}を食べています。",
         values={"egg": "卵"},
     )
 
@@ -44,7 +44,7 @@ def test_render_placeholder_is_case_insensitive():
     renderer = PromptTemplateRenderer()
 
     result = renderer.render(
-        row_text="{{ name }} {{ NAME }} {{ Name }}",
+        raw_text="{{ name }} {{ NAME }} {{ Name }}",
         values={"name": "eggcel"},
     )
 
@@ -55,7 +55,7 @@ def test_render_returns_none_when_value_is_none():
     renderer = PromptTemplateRenderer()
 
     result = renderer.render(
-        row_text="Hello, {{ name }}!",
+        raw_text="Hello, {{ name }}!",
         values={"name": None},
     )
 
@@ -67,9 +67,20 @@ def test_render_unknown_placeholder():
 
     with pytest.raises(ValueError):
         renderer.render(
-            row_text="Hello, {{ username }} {{ datetime }}",
+            raw_text="Hello, {{ username }} {{ datetime }}",
             values={
                 "username": "@mouse",
                 "time": "13:55",
             },
         )
+
+
+def test_render_without_template():
+    renderer = PromptTemplateRenderer()
+
+    result = renderer.render(
+        raw_text="Hello World",
+        values={"username": None},
+    )
+
+    assert result == "Hello World"

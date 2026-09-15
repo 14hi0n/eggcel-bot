@@ -6,7 +6,7 @@ from config import settings
 from services.meme_renderer import compress_for_telegram, render_meme_text
 
 
-async def create_meme(
+async def render_photo(
     image: Image.Image,
     top_text: str | None,
     bottom_text: str,
