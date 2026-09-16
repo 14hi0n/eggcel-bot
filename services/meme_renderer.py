@@ -236,22 +236,35 @@ def _get_text_layout(
         return [], 0.0
 
     stroke = _get_stroke_width(font)
-    boxes = [font.getbbox(line, anchor="ms", stroke_width=stroke) for line in lines]
 
-    # Один шаг для всего блока, без пересечения границ соседних строк.
-    step = max(
-        (
-            upper[3] - lower[1] + LINE_GAP_PX
-            for upper, lower in zip(boxes[:-1], boxes[1:], strict=True)
-        ),
-        default=0.0,
-    )
+    boxes = [
+        font.getbbox(
+            line,
+            anchor="ms",
+            stroke_width=stroke,
+        )
+        for line in lines
+    ]
 
-    top = min(i * step + box[1] for i, box in enumerate(boxes))
-    bottom = max(i * step + box[3] for i, box in enumerate(boxes))
-    offsets = [i * step - top for i in range(len(lines))]
+    offsets: list[float] = []
+    cursor = 0.0
 
-    return offsets, bottom - top
+    for box in boxes:
+        top = box[1]
+        bottom = box[3]
+
+        # Ставим baseline так, чтобы видимый верх строки
+        # начинался ровно в позиции cursor.
+        baseline = cursor - top
+        offsets.append(baseline)
+
+        # Следующая строка начнётся после видимого низа
+        # текущей + фиксированный gap.
+        cursor = baseline + bottom + LINE_GAP_PX
+
+    total_height = cursor - LINE_GAP_PX
+
+    return offsets, total_height
 
 
 def _get_stroke_width(font: ImageFont.FreeTypeFont) -> int:
