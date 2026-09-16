@@ -197,7 +197,7 @@ def render_text_overlay(
         if not text:
             continue
 
-        font, lines = fit_text(text.upper(), max_w, max_h, start_size, draw)
+        font, lines = fit_text(text, max_w, max_h, start_size, draw)
         draw_text_lines(
             draw,
             lines,

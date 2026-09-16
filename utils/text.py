@@ -1,11 +1,11 @@
 def normalize_impact_meme(text: str):
-    """Удаляет лишнюю пунктуацию в конце предложений.
+    """Нормализует текст от Gemini для impoct-мема.
 
     Args:
-        text (str): Текст.
+        text (str): Текст от Gemini.
     """
 
-    text = text.strip().replace("—", "-")
+    text = text.strip().replace("—", "-").upper()
 
     if text.endswith(("...", "…")):
         return text
