@@ -4,8 +4,17 @@ from PIL import Image, ImageDraw, ImageFont
 
 from services.font_service import get_font_path
 
-FONT_SIZE_RATIO = 0.10
-TEXT_MAX_HEIGHT_RATIO = 0.40
+FONT_SIZE_RATIO = 0.16
+
+TEXT_MAX_WIDTH_RATIO = 0.92
+TEXT_MAX_HEIGHT_RATIO = 0.30
+
+TEXT_TOP_PADDING_RATIO = 0.01
+TEXT_BOTTOM_PADDING_RATIO = 0.01
+
+TEXT_STROKE_RATIO = 0.04
+
+LINE_GAP_PX = 0
 
 
 def to_square(image: Image.Image) -> Image.Image:
@@ -89,7 +98,9 @@ def fit_text(
         font = ImageFont.truetype(font_path, size)
         lines = wrap_text(text, font, max_w, draw)
 
-        total_height = len(lines) * size * 1.1
+        # line_height = _get_line_height(font, lines)
+        # total_height = len(lines) * line_height
+        _, total_height = _get_text_layout(font, lines)
 
         if total_height <= max_h:
             return font, lines
@@ -119,26 +130,20 @@ def draw_text_lines(
         is_top (bool): If True, text is drawn from top to bottom.
             Otherwise, text is drawn from bottom to top.
     """
-    line_height = int(font.size * 1.0)
-    stroke_width = max(1, font.size // 15)
+    offsets, total_height = _get_text_layout(font, lines)
+    stroke_width = _get_stroke_width(font)
+    block_top = start_y if is_top else start_y - total_height
 
-    lines_to_draw = lines if is_top else lines[::-1]
-    y = start_y
-
-    for line in lines_to_draw:
-        anchor = "ma" if is_top else "mb"
-
+    for line, offset in zip(lines, offsets, strict=True):
         draw.text(
-            (img_w / 2, y),
+            (img_w / 2, block_top + offset),
             line,
             font=font,
             fill="white",
             stroke_width=stroke_width,
             stroke_fill="black",
-            anchor=anchor,
+            anchor="ms",
         )
-
-        y += line_height if is_top else -line_height
 
 
 def render_meme_text(
@@ -175,14 +180,17 @@ def render_text_overlay(
 
     ref_dim = min(w, h)
 
-    max_w = int(w * 0.92)
-    max_h = int(h * TEXT_MAX_HEIGHT_RATIO)
-    padding = int(h * 0.02)
+    max_w = int(w * TEXT_MAX_WIDTH_RATIO)
+    max_h = int(ref_dim * TEXT_MAX_HEIGHT_RATIO)
+
+    top_padding = int(h * TEXT_TOP_PADDING_RATIO)
+    bottom_padding = int(h * TEXT_TOP_PADDING_RATIO)
+
     start_size = max(int(ref_dim * FONT_SIZE_RATIO), 16)
 
     captions = (
-        (top_text, padding, True),
-        (bottom_text, h - padding, False),
+        (top_text, top_padding, True),
+        (bottom_text, h - bottom_padding, False),
     )
 
     for text, start_y, is_top in captions:
@@ -218,3 +226,33 @@ def compress_for_telegram(image: Image.Image) -> bytes:
     image.save(buf, format="JPEG", quality=85)
 
     return buf.getvalue()
+
+
+def _get_text_layout(
+    font: ImageFont.FreeTypeFont,
+    lines: list[str],
+) -> tuple[list[float], float]:
+    if not lines:
+        return [], 0.0
+
+    stroke = _get_stroke_width(font)
+    boxes = [font.getbbox(line, anchor="ms", stroke_width=stroke) for line in lines]
+
+    # Один шаг для всего блока, без пересечения границ соседних строк.
+    step = max(
+        (
+            upper[3] - lower[1] + LINE_GAP_PX
+            for upper, lower in zip(boxes[:-1], boxes[1:], strict=True)
+        ),
+        default=0.0,
+    )
+
+    top = min(i * step + box[1] for i, box in enumerate(boxes))
+    bottom = max(i * step + box[3] for i, box in enumerate(boxes))
+    offsets = [i * step - top for i in range(len(lines))]
+
+    return offsets, bottom - top
+
+
+def _get_stroke_width(font: ImageFont.FreeTypeFont) -> int:
+    return max(1, round(font.size * TEXT_STROKE_RATIO))
