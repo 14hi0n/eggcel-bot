@@ -5,7 +5,7 @@ def normalize_impact_meme(text: str):
         text (str): Текст.
     """
 
-    text = text.strip()
+    text = text.strip().replace("—", "-")
 
     if text.endswith(("...", "…")):
         return text
