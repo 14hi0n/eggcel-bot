@@ -4,12 +4,12 @@ from PIL import Image, ImageDraw, ImageFont
 
 from services.font_service import get_font_path
 
-FONT_SIZE_RATIO = 0.16
+FONT_SIZE_RATIO = 0.12
 
 TEXT_MAX_WIDTH_RATIO = 0.92
 TEXT_MAX_HEIGHT_RATIO = 0.30
 
-TEXT_TOP_PADDING_RATIO = 0.01
+TEXT_TOP_PADDING_RATIO = 0.02
 TEXT_BOTTOM_PADDING_RATIO = 0.01
 
 TEXT_STROKE_RATIO = 0.04
@@ -27,7 +27,7 @@ def to_square(image: Image.Image) -> Image.Image:
         Image.Image: Resized square image.
     """
     side = min(image.size)
-    return image.resize((side, side), Image.LANCZOS)
+    return image.resize((side, side), Image.Resampling.LANCZOS)
 
 
 def wrap_text(
@@ -184,7 +184,7 @@ def render_text_overlay(
     max_h = int(ref_dim * TEXT_MAX_HEIGHT_RATIO)
 
     top_padding = int(h * TEXT_TOP_PADDING_RATIO)
-    bottom_padding = int(h * TEXT_TOP_PADDING_RATIO)
+    bottom_padding = int(h * TEXT_BOTTOM_PADDING_RATIO)
 
     start_size = max(int(ref_dim * FONT_SIZE_RATIO), 16)
 
@@ -220,7 +220,7 @@ def compress_for_telegram(image: Image.Image) -> bytes:
         bytes: Compressed JPEG image as bytes.
     """
     image = image.convert("RGB")
-    image.thumbnail((1600, 1600), Image.LANCZOS)
+    image.thumbnail((1600, 1600), Image.Resampling.LANCZOS)
 
     buf = io.BytesIO()
     image.save(buf, format="JPEG", quality=85)
