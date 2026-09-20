@@ -14,6 +14,7 @@ TEXT_BOTTOM_PADDING_RATIO = 0.01
 
 TEXT_STROKE_RATIO = 0.04
 
+LINE_HEIGHT_RATIO = 0.90
 LINE_GAP_PX = 0
 
 
@@ -236,7 +237,15 @@ def _get_text_layout(
         return [], 0.0
 
     stroke = _get_stroke_width(font)
+    line_step = _get_line_step(font)
 
+    # Фиксированные baseline для всех строк.
+    # Содержимое строки больше не влияет на расстояние
+    # до следующей строки.
+    raw_offsets = [index * line_step for index in range(len(lines))]
+
+    # Реальный bbox каждой строки нужен только для того,
+    # чтобы узнать внешние границы всего текстового блока.
     boxes = [
         font.getbbox(
             line,
@@ -246,26 +255,24 @@ def _get_text_layout(
         for line in lines
     ]
 
-    offsets: list[float] = []
-    cursor = 0.0
+    top = min(offset + box[1] for offset, box in zip(raw_offsets, boxes, strict=True))
 
-    for box in boxes:
-        top = box[1]
-        bottom = box[3]
+    bottom = max(
+        offset + box[3] for offset, box in zip(raw_offsets, boxes, strict=True)
+    )
 
-        # Ставим baseline так, чтобы видимый верх строки
-        # начинался ровно в позиции cursor.
-        baseline = cursor - top
-        offsets.append(baseline)
+    # Сдвигаем весь блок так, чтобы его верх был в 0.
+    # Расстояния между строками при этом не меняются.
+    offsets = [offset - top for offset in raw_offsets]
 
-        # Следующая строка начнётся после видимого низа
-        # текущей + фиксированный gap.
-        cursor = baseline + bottom + LINE_GAP_PX
-
-    total_height = cursor - LINE_GAP_PX
+    total_height = bottom - top
 
     return offsets, total_height
 
 
 def _get_stroke_width(font: ImageFont.FreeTypeFont) -> int:
     return max(1, round(font.size * TEXT_STROKE_RATIO))
+
+
+def _get_line_step(font: ImageFont.FreeTypeFont) -> int:
+    return round(font.size * LINE_HEIGHT_RATIO)

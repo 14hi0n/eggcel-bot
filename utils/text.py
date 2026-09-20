@@ -5,7 +5,7 @@ def normalize_impact_meme(text: str):
         text (str): Текст от Gemini.
     """
 
-    text = text.strip().replace("—", "-").upper()
+    text = text.strip().replace("—", "-").replace("ё", "е").upper()
 
     if text.endswith(("...", "…")):
         return text
