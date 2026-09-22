@@ -3,22 +3,22 @@ from datetime import datetime
 from sqlalchemy import BigInteger, Boolean, DateTime, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
-from .base import BaseModel
+from database.models.base import BaseModel
 
 
 class User(BaseModel):
-    __tablename__ = "chats"
+    __tablename__ = "users"
 
     telegram_id: Mapped[int] = mapped_column(
         BigInteger,
         nullable=False,
         unique=True,
     )
-    fullname: Mapped[str] = mapped_column(
+    fullname: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,
     )
-    username: Mapped[str] = mapped_column(
+    username: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,
     )

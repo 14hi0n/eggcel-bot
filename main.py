@@ -20,6 +20,7 @@ from handlers.pending_chats import show_pending_chats
 from handlers.photo import handle_private_photo, handle_public_photo
 from handlers.remove_chat import remove_chat
 from handlers.start import start
+from handlers.user_activity import track_private_user
 from handlers.version import show_version
 from helpers.startup import log_startup_summary
 from services.animation_renderer import AnimationRenderer
@@ -95,6 +96,15 @@ def main() -> None:
     admin_filter = filters.User(user_id=settings.admin_ids)
 
     application.add_error_handler(error_handler)
+
+    application.add_handler(
+        MessageHandler(
+            filters.ChatType.PRIVATE,
+            track_private_user,
+        ),
+        group=-1,
+    )
+
     application.add_handler(
         CommandHandler("start", start, filters=filters.ChatType.PRIVATE)
     )
