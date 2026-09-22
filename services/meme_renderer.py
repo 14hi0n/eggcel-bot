@@ -4,7 +4,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from services.font_service import get_font_path
 
-FONT_SIZE_RATIO = 0.12
+FONT_SIZE_RATIO = 0.10
 
 TEXT_MAX_WIDTH_RATIO = 0.92
 TEXT_MAX_HEIGHT_RATIO = 0.30
