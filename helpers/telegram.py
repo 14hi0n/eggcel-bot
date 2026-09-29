@@ -14,7 +14,9 @@ async def download_photo(photos: Sequence[PhotoSize]) -> Image.Image:
     return Image.open(io.BytesIO(photo_bytes))
 
 
-def get_text_callback(update: Update) -> tuple[CallbackQuery, Message, str] | None:
+def get_text_callback(
+    update: Update,
+) -> tuple[CallbackQuery, Message, str, str] | None:
     query = update.callback_query
 
     if query is None or query.data is None:
@@ -24,10 +26,12 @@ def get_text_callback(update: Update) -> tuple[CallbackQuery, Message, str] | No
     if not isinstance(message, Message):
         return None
 
-    if message.text is None:
+    content = message.text or message.caption
+
+    if content is None:
         return None
 
-    return query, message, query.data
+    return query, message, query.data, content
 
 
 def get_prompt_template_values(message: Message) -> dict[str, str | None]:

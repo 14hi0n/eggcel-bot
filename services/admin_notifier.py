@@ -2,6 +2,7 @@ import logging
 from collections.abc import Sequence
 
 from telegram import Bot, InlineKeyboardMarkup
+from telegram.constants import ParseMode
 from telegram.error import TelegramError
 
 logger = logging.getLogger(__name__)
@@ -16,6 +17,7 @@ class AdminNotifier:
         self,
         *,
         text: str,
+        photo: bytes | None = None,
         reply_markup: InlineKeyboardMarkup | None = None,
     ) -> None:
         """
@@ -23,14 +25,24 @@ class AdminNotifier:
         """
         for admin_id in self._admin_ids:
             try:
-                await self._bot.send_message(
-                    chat_id=admin_id,
-                    text=text,
-                    reply_markup=reply_markup,
-                )
+                if photo is not None:
+                    await self._bot.send_photo(
+                        chat_id=admin_id,
+                        photo=photo,
+                        caption=text,
+                        reply_markup=reply_markup,
+                        parse_mode=ParseMode.HTML,
+                    )
+                else:
+                    await self._bot.send_message(
+                        chat_id=admin_id,
+                        text=text,
+                        reply_markup=reply_markup,
+                        parse_mode=ParseMode.HTML,
+                    )
             except TelegramError as exc:
                 logger.warning(
-                    "Filed to notify admin %s: %s",
+                    "Failed to notify admin %s: %s",
                     admin_id,
                     exc,
                 )

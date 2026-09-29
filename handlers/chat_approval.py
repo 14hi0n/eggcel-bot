@@ -7,12 +7,10 @@ from config import settings
 from database.manager import DatabaseManager
 from database.models.chat import ChatStatus
 from database.repositories.chat import ChatRepository
+from helpers.moderation import notify_chat_moderation_request
 from helpers.telegram import get_text_callback
-from keyboards.approve import approve_chat_keyboard
-from services.admin_notifier import AdminNotifier
 from services.chat_service import ChatActionOutcome, ChatService
 from services.exceptions.chat_service import ChatNotFoundError
-from texts.moderation import AdminChatModerationMessages
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +23,7 @@ async def chat_moderate_callback(
     if callback is None:
         return
 
-    query, message, data = callback
+    query, message, data, content = callback
 
     user = update.effective_user
 
@@ -82,9 +80,12 @@ async def chat_moderate_callback(
             return
 
     await query.answer(answer, show_alert=alert)
-    await query.edit_message_text(
-        f"{message.text}\n\n{verdict}",
-    )
+    updated_content = f"{content}\n\n{verdict}"
+
+    if message.caption is not None:
+        await query.edit_message_caption(caption=updated_content)
+    else:
+        await query.edit_message_text(text=updated_content)
 
 
 async def on_bot_added(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -133,10 +134,8 @@ async def on_bot_added(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         logger.debug("Bot has been added back to the chat: %s", tg_chat.id)
         return
 
-    notifier = AdminNotifier(context.bot, settings.admin_ids)
-    request_msg = AdminChatModerationMessages.chat_request(tg_chat)
-
-    await notifier.send(
-        text=request_msg,
-        reply_markup=approve_chat_keyboard(tg_chat.id),
+    await notify_chat_moderation_request(
+        context,
+        chat=tg_chat,
+        added_by=chat_member.from_user,
     )

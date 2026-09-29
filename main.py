@@ -27,6 +27,7 @@ from handlers.version import show_version
 from helpers.startup import log_startup_summary
 from services.animation_renderer import AnimationRenderer
 from services.animation_service import AnimationService
+from services.chat_moderation_service import ChatModerationService
 from services.font_service import get_font_path, prepare_font
 from services.gemini_caption_generator import generate_meme_caption
 from services.meme_generation_service import MemeGenerationService
@@ -50,6 +51,9 @@ async def post_init(application: Application) -> None:
 
     application.bot_data["meme_generation_service"] = MemeGenerationService(
         db.session_factory
+    )
+    application.bot_data["chat_moderation_service"] = ChatModerationService(
+        application.bot
     )
 
     prompt_builder = MemePromptBuilder(

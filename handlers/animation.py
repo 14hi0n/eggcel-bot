@@ -12,8 +12,8 @@ from database.manager import DatabaseManager
 from database.models.chat import ChatStatus
 from database.models.meme_generation import GenerationMode, MediaType
 from database.repositories.chat import ChatRepository
+from helpers.moderation import notify_chat_moderation_request
 from helpers.telegram import get_prompt_template_values
-from keyboards.approve import approve_chat_keyboard
 from services.admin_notifier import AdminNotifier
 from services.animation_service import AnimationService
 from services.chat_service import ChatService
@@ -304,10 +304,9 @@ async def handle_public_animation(
     # Если чат появился впервые,
     # нужно отправить админу запрос на модерацию.
     if is_created:
-        notifier = AdminNotifier(context.bot, settings.admin_ids)
-        await notifier.send(
-            text=AdminChatModerationMessages.chat_request(chat),
-            reply_markup=approve_chat_keyboard(chat.id),
+        await notify_chat_moderation_request(
+            context,
+            chat=chat,
         )
         return
 

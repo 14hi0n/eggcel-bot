@@ -10,15 +10,13 @@ from database.manager import DatabaseManager
 from database.models.chat import ChatStatus
 from database.models.meme_generation import GenerationMode, MediaType
 from database.repositories.chat import ChatRepository
+from helpers.moderation import notify_chat_moderation_request
 from helpers.telegram import download_photo, get_prompt_template_values
-from keyboards.approve import approve_chat_keyboard
-from services.admin_notifier import AdminNotifier
 from services.chat_service import ChatService
 from services.exceptions.gemini import GeminiError
 from services.gemini_caption_generator import MemeCaption
 from services.meme_generation_service import MemeGenerationService
 from services.photo_service import PhotoService
-from texts.moderation import AdminChatModerationMessages
 from utils.parse import parse_user_caption
 
 logger = logging.getLogger(__name__)
@@ -149,10 +147,9 @@ async def handle_public_photo(
     if is_created:
         logger.debug("New chat %s has been added to the DB", chat_id)
 
-        notifier = AdminNotifier(context.bot, settings.admin_ids)
-        await notifier.send(
-            text=AdminChatModerationMessages.chat_request(tg_chat),
-            reply_markup=approve_chat_keyboard(tg_chat.id),
+        await notify_chat_moderation_request(
+            context,
+            chat=tg_chat,
         )
         return
 
