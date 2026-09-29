@@ -16,17 +16,20 @@ from handlers.add_chat import add_chat
 from handlers.animation import handle_private_animation, handle_public_animation
 from handlers.chat_approval import chat_moderate_callback, on_bot_added
 from handlers.error import error_handler
+from handlers.help import show_help
 from handlers.pending_chats import show_pending_chats
 from handlers.photo import handle_private_photo, handle_public_photo
 from handlers.remove_chat import remove_chat
 from handlers.start import start
-from handlers.user_activity import track_private_user
+from handlers.statistics import show_generation_statistics
+from handlers.user_activity import track_user_activity
 from handlers.version import show_version
 from helpers.startup import log_startup_summary
 from services.animation_renderer import AnimationRenderer
 from services.animation_service import AnimationService
 from services.font_service import get_font_path, prepare_font
 from services.gemini_caption_generator import generate_meme_caption
+from services.meme_generation_service import MemeGenerationService
 from services.meme_prompt_builder import MemePromptBuilder
 from services.meme_renderer import render_text_overlay
 from services.photo_service import PhotoService
@@ -44,6 +47,10 @@ async def post_init(application: Application) -> None:
     application.bot_data["db"] = db
 
     await db.init()
+
+    application.bot_data["meme_generation_service"] = MemeGenerationService(
+        db.session_factory
+    )
 
     prompt_builder = MemePromptBuilder(
         prompts_dir=settings.meme_prompts_dir,
@@ -99,52 +106,81 @@ def main() -> None:
 
     application.add_handler(
         MessageHandler(
-            filters.ChatType.PRIVATE,
-            track_private_user,
+            filters.ALL,
+            track_user_activity,
         ),
         group=-1,
     )
 
     application.add_handler(
-        CommandHandler("start", start, filters=filters.ChatType.PRIVATE)
+        CommandHandler(
+            "start",
+            start,
+            filters=filters.ChatType.PRIVATE,
+        )
     )
+
+    application.add_handler(
+        CommandHandler(
+            ("help", "h"),
+            show_help,
+            filters=admin_filter & filters.ChatType.PRIVATE,
+        )
+    )
+
     application.add_handler(
         CommandHandler(
             "add",
             add_chat,
-            filters=admin_filter,
+            filters=admin_filter & filters.ChatType.PRIVATE,
         )
     )
     application.add_handler(
         CommandHandler(
             "remove",
             remove_chat,
-            filters=admin_filter,
+            filters=admin_filter & filters.ChatType.PRIVATE,
         )
     )
     application.add_handler(
         CommandHandler(
             "pending",
             show_pending_chats,
-            filters=admin_filter,
+            filters=admin_filter & filters.ChatType.PRIVATE,
         )
     )
     application.add_handler(
         CommandHandler(
             ("version", "ver"),
             show_version,
-            filters=admin_filter,
+            filters=admin_filter & filters.ChatType.PRIVATE,
+        )
+    )
+    application.add_handler(
+        CommandHandler(
+            ("stat", "stats"),
+            show_generation_statistics,
+            filters=admin_filter & filters.ChatType.PRIVATE,
         )
     )
 
     application.add_handler(
-        ChatMemberHandler(on_bot_added, ChatMemberHandler.MY_CHAT_MEMBER)
+        ChatMemberHandler(
+            on_bot_added,
+            ChatMemberHandler.MY_CHAT_MEMBER,
+        )
     )
     application.add_handler(
-        MessageHandler(filters.PHOTO & filters.ChatType.GROUPS, handle_public_photo)
+        MessageHandler(
+            filters.PHOTO & filters.ChatType.GROUPS,
+            handle_public_photo,
+        )
     )
     application.add_handler(
-        MessageHandler(filters.PHOTO & filters.ChatType.PRIVATE, handle_private_photo)
+        MessageHandler(
+            filters.PHOTO & filters.ChatType.PRIVATE,
+            handle_private_photo,
+        )
     )
 
     application.add_handler(

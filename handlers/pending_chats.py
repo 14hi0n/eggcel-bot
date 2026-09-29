@@ -4,7 +4,7 @@ from telegram.ext import ContextTypes
 from database.manager import DatabaseManager
 from database.repositories.chat import ChatRepository
 from keyboards.approve import approve_chat_keyboard
-from texts.messages import AdminMessages
+from texts.moderation import AdminChatModerationMessages
 
 
 async def show_pending_chats(
@@ -31,7 +31,7 @@ async def show_pending_chats(
 
     for chat in chats[:max_items]:
         await message.reply_text(
-            text=AdminMessages.pending_chat(chat),
+            text=AdminChatModerationMessages.pending_chat(chat),
             reply_markup=approve_chat_keyboard(chat.chat_id),
         )
 

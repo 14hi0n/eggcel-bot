@@ -8,14 +8,17 @@ from telegram.ext import ContextTypes
 from config import settings
 from database.manager import DatabaseManager
 from database.models.chat import ChatStatus
+from database.models.meme_generation import GenerationMode, MediaType
 from database.repositories.chat import ChatRepository
 from helpers.telegram import download_photo, get_prompt_template_values
 from keyboards.approve import approve_chat_keyboard
 from services.admin_notifier import AdminNotifier
 from services.chat_service import ChatService
+from services.exceptions.gemini import GeminiError
 from services.gemini_caption_generator import MemeCaption
+from services.meme_generation_service import MemeGenerationService
 from services.photo_service import PhotoService
-from texts.messages import AdminMessages
+from texts.moderation import AdminChatModerationMessages
 from utils.parse import parse_user_caption
 
 logger = logging.getLogger(__name__)
@@ -32,48 +35,90 @@ async def _render_and_replay(
 
     chat_id = message.chat_id
     message_id = message.message_id
-    mode = "ai" if caption is None else "custom"
+    mode = GenerationMode.ai if caption is None else GenerationMode.custom
     chat_type = message.chat.type
+    tg_user = message.from_user
+    telegram_user_id = (
+        tg_user.id if tg_user is not None and not tg_user.is_bot else None
+    )
 
     template_values = get_prompt_template_values(message)
-    service: PhotoService = context.bot_data["photo_service"]
+    photo_service: PhotoService = context.bot_data["photo_service"]
+    generation_service: MemeGenerationService = context.bot_data[
+        "meme_generation_service"
+    ]
+    generation_id: int | None = None
 
     logger.info(
         "Processing photo: chat_id=%s message_id=%s chat_type=%s mode=%s",
         chat_id,
         message_id,
         chat_type,
-        mode,
+        mode.value,
     )
 
     try:
         image = await download_photo(message.photo)
         with image:
             await asyncio.to_thread(image.load)
-            result = await service.create_meme(
+
+            generation_id = await generation_service.start(
+                telegram_chat_id=chat_id,
+                telegram_user_id=telegram_user_id,
+                telegram_message_id=message_id,
+                mode=mode,
+                media_type=MediaType.photo,
+            )
+
+            result = await photo_service.create_meme(
                 image=image,
                 template_values=template_values,
                 caption=caption,
             )
-    except OSError, RuntimeError, TimeoutError, ValueError:
+
+        await message.reply_photo(photo=result)
+    except GeminiError as exc:
+        if generation_id is not None:
+            await generation_service.mark_failure(generation_id, exc)
+
+        logger.warning(
+            "Photo caption generation failed: chat_id=%s message_id=%s error=%s",
+            chat_id,
+            message_id,
+            type(exc).__name__,
+            exc_info=True,
+        )
+
+        if chat_type == "private":
+            await message.reply_text("Не удалось сгенерировать подпись")
+        return
+    except (OSError, RuntimeError, TimeoutError, ValueError) as exc:
+        if generation_id is not None:
+            await generation_service.mark_failure(generation_id, exc)
+
         logger.exception(
             "Photo processing failed: chat_id=%s message_id=%s chat_type=%s mode=%s",
             chat_id,
             message_id,
             chat_type,
-            mode,
+            mode.value,
         )
         if chat_type == "private":
             await message.reply_text("Какая-то ошибка во время обработки")
         return
+    except Exception as exc:
+        if generation_id is not None:
+            await generation_service.mark_failure(generation_id, exc)
+        raise
 
-    await message.reply_photo(photo=result)
+    assert generation_id is not None
+    await generation_service.mark_success(generation_id)
     logger.info(
         "Sent photo: chat_id=%s message_id=%s chat_type=%s mode=%s",
         chat_id,
         message_id,
         chat_type,
-        mode,
+        mode.value,
     )
 
 
@@ -106,7 +151,7 @@ async def handle_public_photo(
 
         notifier = AdminNotifier(context.bot, settings.admin_ids)
         await notifier.send(
-            text=AdminMessages.chat_request(tg_chat),
+            text=AdminChatModerationMessages.chat_request(tg_chat),
             reply_markup=approve_chat_keyboard(tg_chat.id),
         )
         return

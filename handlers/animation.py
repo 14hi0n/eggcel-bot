@@ -10,6 +10,7 @@ from telegram.ext import ContextTypes
 from config import settings
 from database.manager import DatabaseManager
 from database.models.chat import ChatStatus
+from database.models.meme_generation import GenerationMode, MediaType
 from database.repositories.chat import ChatRepository
 from helpers.telegram import get_prompt_template_values
 from keyboards.approve import approve_chat_keyboard
@@ -18,7 +19,8 @@ from services.animation_service import AnimationService
 from services.chat_service import ChatService
 from services.exceptions.gemini import GeminiError
 from services.gemini_caption_generator import MemeCaption
-from texts.messages import AdminMessages
+from services.meme_generation_service import MemeGenerationService
+from texts.moderation import AdminChatModerationMessages
 from utils.parse import parse_user_caption
 
 logger = logging.getLogger(__name__)
@@ -46,8 +48,12 @@ async def _render_and_reply(
     animation = message.animation
     chat_id = message.chat.id
     message_id = message.message_id
-    mode = "ai" if caption is None else "custom"
+    mode = GenerationMode.ai if caption is None else GenerationMode.custom
     template_values = get_prompt_template_values(message) if caption is None else {}
+    tg_user = message.from_user
+    telegram_user_id = (
+        tg_user.id if tg_user is not None and not tg_user.is_bot else None
+    )
 
     is_private = message.chat.type == "private"
     file_size = animation.file_size
@@ -89,13 +95,17 @@ async def _render_and_reply(
             await message.reply_text("Слишком большой вес анимации")
         return
 
-    service: AnimationService = context.bot_data["animation_service"]
+    animation_service: AnimationService = context.bot_data["animation_service"]
+    generation_service: MemeGenerationService = context.bot_data[
+        "meme_generation_service"
+    ]
+    generation_id: int | None = None
 
     logger.info(
         "Processing animation: chat_id=%s message_id=%s mode=%s duration=%.3fs",
         chat_id,
         message_id,
-        mode,
+        mode.value,
         seconds,
     )
 
@@ -144,12 +154,21 @@ async def _render_and_reply(
                 "Generating animation meme: chat_id=%s message_id=%s mode=%s",
                 chat_id,
                 message_id,
-                mode,
+                mode.value,
             )
+
+            generation_id = await generation_service.start(
+                telegram_chat_id=chat_id,
+                telegram_user_id=telegram_user_id,
+                telegram_message_id=message_id,
+                mode=mode,
+                media_type=MediaType.animation,
+            )
+
             # Если caption None то генерирует подпись через Gemini.
             # Генерирует видео и сохраняет в source.
             # Возвращается путь к итоговому видео.
-            result = await service.create_meme(
+            result = await animation_service.create_meme(
                 source=source,
                 workdir=workdir,
                 duration=seconds,
@@ -169,6 +188,12 @@ async def _render_and_reply(
                     result_size,
                     _MAX_OUTPUT_FILE_SIZE,
                 )
+
+                await generation_service.mark_error(
+                    generation_id,
+                    error_code="output_too_large",
+                )
+
                 if is_private:
                     await message.reply_text(
                         "Результат получился слишокм большим для отправки"
@@ -191,6 +216,9 @@ async def _render_and_reply(
                 write_timeout=_WRITE_TIMEOUT,
             )
     except GeminiError as exc:
+        if generation_id is not None:
+            await generation_service.mark_failure(generation_id, exc)
+
         logger.warning(
             "Animation caption generation failed: chat_id=%s message_id=%s error=%s",
             chat_id,
@@ -204,7 +232,7 @@ async def _render_and_reply(
 
         notifier = AdminNotifier(context.bot, settings.admin_ids)
         await notifier.send(
-            text=AdminMessages.error(
+            text=AdminChatModerationMessages.error(
                 exc,
                 update=update,
                 title=f"Ошибка Gemini: {type(exc).__name__}",
@@ -212,24 +240,34 @@ async def _render_and_reply(
         )
 
         return
-    except OSError, RuntimeError, TimeoutError, ValueError:
+    except (OSError, RuntimeError, TimeoutError, ValueError) as exc:
+        if generation_id is not None:
+            await generation_service.mark_failure(generation_id, exc)
+
         logger.exception(
             "Animation processing failed: chat_id=%s message_id=%s mode=%s",
             chat_id,
             message_id,
-            mode,
+            mode.value,
         )
 
         if is_private:
             await message.reply_text("Не удалось обработать анимацию")
 
         return
+    except Exception as exc:
+        if generation_id is not None:
+            await generation_service.mark_failure(generation_id, exc)
+        raise
+
+    assert generation_id is not None
+    await generation_service.mark_success(generation_id)
 
     logger.info(
         "Sent animation meme: chat_id=%s message_id=%s mode=%s bytes=%s",
         chat_id,
         message_id,
-        mode,
+        mode.value,
         result_size,
     )
 
@@ -268,7 +306,7 @@ async def handle_public_animation(
     if is_created:
         notifier = AdminNotifier(context.bot, settings.admin_ids)
         await notifier.send(
-            text=AdminMessages.chat_request(chat),
+            text=AdminChatModerationMessages.chat_request(chat),
             reply_markup=approve_chat_keyboard(chat.id),
         )
         return

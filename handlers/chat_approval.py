@@ -12,7 +12,7 @@ from keyboards.approve import approve_chat_keyboard
 from services.admin_notifier import AdminNotifier
 from services.chat_service import ChatActionOutcome, ChatService
 from services.exceptions.chat_service import ChatNotFoundError
-from texts.messages import AdminMessages
+from texts.moderation import AdminChatModerationMessages
 
 logger = logging.getLogger(__name__)
 
@@ -134,7 +134,7 @@ async def on_bot_added(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
 
     notifier = AdminNotifier(context.bot, settings.admin_ids)
-    request_msg = AdminMessages.chat_request(tg_chat)
+    request_msg = AdminChatModerationMessages.chat_request(tg_chat)
 
     await notifier.send(
         text=request_msg,

@@ -3,19 +3,20 @@ from telegram import Chat, Update
 from database.models.chat import Chat as DatabaseChat
 
 
-class AdminMessages:
+class AdminChatModerationMessages:
     @staticmethod
     def chat_request(chat: Chat) -> str:
         lines = [
             "Запрос на активацию",
             "",
             f"ID: {chat.id}\n",
-            f"Chat Title: {chat.title or '???'}\n",
-            f"Chat Type: {chat.type}",
+            f"Title: {chat.title or '???'}\n",
+            "Desc: todo",
+            f"Type: {chat.type}",
         ]
 
         if chat.username is not None:
-            lines.append(f"Chat Username: @{chat.username}")
+            lines.append(f"Username: @{chat.username}")
 
         return "\n".join(lines)
 
@@ -25,12 +26,13 @@ class AdminMessages:
             "Ожидает модерации",
             "",
             f"ID: {chat.chat_id}",
-            f"Chat Title: {chat.chat_title or '???'}\n",
-            f"Chat Type: {chat.chat_type}",
+            f"Title: {chat.chat_title or '???'}\n",
+            "Desc: todo",
+            f"Type: {chat.chat_type}",
         ]
 
         if chat.tag_name is not None:
-            lines.append(f"Chat Username: @{chat.tag_name}")
+            lines.append(f"Username: @{chat.tag_name}")
 
         return "\n".join(lines)
 
