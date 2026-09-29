@@ -12,15 +12,13 @@ from database.manager import DatabaseManager
 from database.models.chat import ChatStatus
 from database.models.meme_generation import GenerationMode, MediaType
 from database.repositories.chat import ChatRepository
-from helpers.moderation import notify_chat_moderation_request
+from helpers.moderation import notify_chat_error, notify_chat_moderation_request
 from helpers.telegram import get_prompt_template_values
-from services.admin_notifier import AdminNotifier
 from services.animation_service import AnimationService
 from services.chat_service import ChatService
 from services.exceptions.gemini import GeminiError
 from services.gemini_caption_generator import MemeCaption
 from services.meme_generation_service import MemeGenerationService
-from texts.moderation import AdminChatModerationMessages
 from utils.parse import parse_user_caption
 
 logger = logging.getLogger(__name__)
@@ -230,13 +228,11 @@ async def _render_and_reply(
         if is_private:
             await message.reply_text("Не удалось сгенерить подпись")
 
-        notifier = AdminNotifier(context.bot, settings.admin_ids)
-        await notifier.send(
-            text=AdminChatModerationMessages.error(
-                exc,
-                update=update,
-                title=f"Ошибка Gemini: {type(exc).__name__}",
-            )
+        await notify_chat_error(
+            context,
+            update=update,
+            error=exc,
+            title=f"Ошибка Gemini: {type(exc).__name__}",
         )
 
         return

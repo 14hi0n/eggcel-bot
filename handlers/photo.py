@@ -10,7 +10,7 @@ from database.manager import DatabaseManager
 from database.models.chat import ChatStatus
 from database.models.meme_generation import GenerationMode, MediaType
 from database.repositories.chat import ChatRepository
-from helpers.moderation import notify_chat_moderation_request
+from helpers.moderation import notify_chat_error, notify_chat_moderation_request
 from helpers.telegram import download_photo, get_prompt_template_values
 from services.chat_service import ChatService
 from services.exceptions.gemini import GeminiError
@@ -89,6 +89,14 @@ async def _render_and_replay(
 
         if chat_type == "private":
             await message.reply_text("Не удалось сгенерировать подпись")
+
+        await notify_chat_error(
+            context,
+            update=update,
+            error=exc,
+            title=f"Ошибка Gemini: {type(exc).__name__}",
+        )
+
         return
     except (OSError, RuntimeError, TimeoutError, ValueError) as exc:
         if generation_id is not None:

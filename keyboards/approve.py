@@ -1,6 +1,15 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 
+def open_chat_keyboard(chat_url: str | None) -> InlineKeyboardMarkup | None:
+    if chat_url is None:
+        return None
+
+    return InlineKeyboardMarkup(
+        [[InlineKeyboardButton(text="Открыть чат", url=chat_url)]]
+    )
+
+
 def approve_chat_keyboard(
     chat_id: int,
     *,
