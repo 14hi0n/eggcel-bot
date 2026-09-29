@@ -13,7 +13,7 @@ from database.repositories.chat import ChatRepository
 from helpers.moderation import notify_chat_error, notify_chat_moderation_request
 from helpers.telegram import download_photo, get_prompt_template_values
 from services.chat_service import ChatService
-from services.exceptions.gemini import GeminiError
+from services.exceptions.gemini import GeminiError, GeminiNSFWError
 from services.gemini_caption_generator import MemeCaption
 from services.meme_generation_service import MemeGenerationService
 from services.photo_service import PhotoService
@@ -75,6 +75,27 @@ async def _render_and_replay(
             )
 
         await message.reply_photo(photo=result)
+    except GeminiNSFWError as exc:
+        if generation_id is not None:
+            await generation_service.mark_failure(generation_id, exc)
+
+        logger.info(
+            "Photo rejected as NSFW: chat_id=%s message_id=%s",
+            chat_id,
+            message_id,
+        )
+
+        if chat_type == "private":
+            await message.reply_text("Gemini отклонил изображение как NSFW")
+
+        await notify_chat_error(
+            context,
+            update=update,
+            error=exc,
+            title="NSFW-отказ Gemini",
+        )
+
+        return
     except GeminiError as exc:
         if generation_id is not None:
             await generation_service.mark_failure(generation_id, exc)

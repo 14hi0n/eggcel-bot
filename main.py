@@ -105,12 +105,18 @@ def main() -> None:
     )
 
     admin_filter = filters.User(user_id=settings.admin_ids)
+    user_activity_filter = (
+        filters.ChatType.PRIVATE
+        | filters.COMMAND
+        | filters.PHOTO
+        | filters.ANIMATION
+    )
 
     application.add_error_handler(error_handler)
 
     application.add_handler(
         MessageHandler(
-            filters.ALL,
+            user_activity_filter,
             track_user_activity,
         ),
         group=-1,

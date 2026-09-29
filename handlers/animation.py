@@ -16,7 +16,7 @@ from helpers.moderation import notify_chat_error, notify_chat_moderation_request
 from helpers.telegram import get_prompt_template_values
 from services.animation_service import AnimationService
 from services.chat_service import ChatService
-from services.exceptions.gemini import GeminiError
+from services.exceptions.gemini import GeminiError, GeminiNSFWError
 from services.gemini_caption_generator import MemeCaption
 from services.meme_generation_service import MemeGenerationService
 from utils.parse import parse_user_caption
@@ -213,6 +213,27 @@ async def _render_and_reply(
                 filename="meme.mp4",
                 write_timeout=_WRITE_TIMEOUT,
             )
+    except GeminiNSFWError as exc:
+        if generation_id is not None:
+            await generation_service.mark_failure(generation_id, exc)
+
+        logger.info(
+            "Animation rejected as NSFW: chat_id=%s message_id=%s",
+            chat_id,
+            message_id,
+        )
+
+        if is_private:
+            await message.reply_text("Gemini отклонил анимацию как NSFW")
+
+        await notify_chat_error(
+            context,
+            update=update,
+            error=exc,
+            title="NSFW-отказ Gemini",
+        )
+
+        return
     except GeminiError as exc:
         if generation_id is not None:
             await generation_service.mark_failure(generation_id, exc)

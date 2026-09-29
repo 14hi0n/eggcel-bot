@@ -18,6 +18,7 @@ async def track_user_activity(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
+    """Регистрация юзера который взаимодействовал с ботом."""
     tg_user, chat = update.effective_user, update.effective_chat
 
     if tg_user is None or tg_user.is_bot or chat is None:
