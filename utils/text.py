@@ -10,4 +10,4 @@ def normalize_impact_meme(text: str):
     if text.endswith(("...", "…")):
         return text
 
-    return text.rstrip(".,")
+    return text.rstrip(".,-")
