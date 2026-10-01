@@ -20,6 +20,14 @@ class GenerationStatistics:
     by_media_type: dict[MediaType, int]
 
 
+def _to_database_datetime(value: datetime) -> datetime:
+    """Convert a datetime to the naive UTC format used by BaseModel."""
+    if value.tzinfo is None:
+        return value
+
+    return value.astimezone(UTC).replace(tzinfo=None)
+
+
 class MemeGenerationRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
@@ -94,10 +102,14 @@ class MemeGenerationRepository:
             conditions.append(MemeGeneration.user_id == user_id)
 
         if start_at is not None:
-            conditions.append(MemeGeneration.created_at >= start_at)
+            conditions.append(
+                MemeGeneration.created_at >= _to_database_datetime(start_at)
+            )
 
         if end_at is not None:
-            conditions.append(MemeGeneration.created_at < end_at)
+            conditions.append(
+                MemeGeneration.created_at < _to_database_datetime(end_at)
+            )
 
         total = await self.session.scalar(
             select(func.count(MemeGeneration.id)).where(*conditions)
