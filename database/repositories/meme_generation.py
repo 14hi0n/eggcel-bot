@@ -82,6 +82,8 @@ class MemeGenerationRepository:
         *,
         chat_id: int | None = None,
         user_id: int | None = None,
+        start_at: datetime | None = None,
+        end_at: datetime | None = None,
     ) -> GenerationStatistics:
         conditions = []
 
@@ -90,6 +92,12 @@ class MemeGenerationRepository:
 
         if user_id is not None:
             conditions.append(MemeGeneration.user_id == user_id)
+
+        if start_at is not None:
+            conditions.append(MemeGeneration.created_at >= start_at)
+
+        if end_at is not None:
+            conditions.append(MemeGeneration.created_at < end_at)
 
         total = await self.session.scalar(
             select(func.count(MemeGeneration.id)).where(*conditions)

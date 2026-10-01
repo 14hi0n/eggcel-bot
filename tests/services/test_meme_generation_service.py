@@ -1,4 +1,5 @@
 import asyncio
+from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
@@ -8,6 +9,7 @@ from database.models.meme_generation import (
     GenerationMode,
     GenerationStatus,
     MediaType,
+    MemeGeneration,
 )
 from database.models.user import User
 from services.exceptions.gemini import GeminiNSFWError
@@ -58,6 +60,23 @@ async def _test_tracks_generation_and_builds_statistics() -> None:
         assert processing.by_status == {GenerationStatus.processing: 1}
         assert processing.by_mode == {GenerationMode.ai: 1}
         assert processing.by_media_type == {MediaType.photo: 1}
+
+        async with session_factory() as session, session.begin():
+            generation = await session.get(MemeGeneration, generation_id)
+            assert generation is not None
+            generation.created_at = datetime(2026, 9, 29, 12)
+
+        selected_day = await service.get_overall_statistics(
+            start_at=datetime(2026, 9, 29, tzinfo=UTC),
+            end_at=datetime(2026, 9, 30, tzinfo=UTC),
+        )
+        following_day = await service.get_overall_statistics(
+            start_at=datetime(2026, 9, 30, tzinfo=UTC),
+            end_at=datetime(2026, 10, 1, tzinfo=UTC),
+        )
+
+        assert selected_day.total == 1
+        assert following_day.total == 0
 
         updated = await service.mark_failure(
             generation_id,

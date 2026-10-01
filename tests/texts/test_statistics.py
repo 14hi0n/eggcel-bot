@@ -28,12 +28,31 @@ def test_render_overall_generation_statistics() -> None:
     text = GenerationStatisticsMessages.overall(statistics)
 
     assert "Область: все генерации" in text
+    assert "Период: всё время" in text
     assert "Всего: 8" in text
     assert "Успешно: 5" in text
     assert "В обработке: 0" in text
     assert "Отклонено NSFW: 2" in text
     assert "AI: 6" in text
     assert "Анимации: 1" in text
+
+
+def test_render_statistics_period() -> None:
+    statistics = GenerationStatistics(
+        total=0,
+        by_status={},
+        by_mode={},
+        by_media_type={},
+    )
+
+    text = GenerationStatisticsMessages.for_chat(
+        statistics,
+        -100200,
+        period_label="09/2026 (UTC)",
+    )
+
+    assert "Область: чат -100200" in text
+    assert "Период: 09/2026 (UTC)" in text
 
 
 def test_render_not_found_messages() -> None:

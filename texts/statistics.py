@@ -18,25 +18,39 @@ class GenerationStatisticsMessages:
         return "\n".join(
             (
                 "Использование:",
-                "/stat - общая статистика",
-                "/stat user <user_id>",
-                "/stat chat <chat_id>",
+                "/stat [today|MM/DD/YYYY|MM/YYYY|YYYY]",
+                "/stat user <user_id> [период]",
+                "/stat chat <chat_id> [период]",
+                "",
+                "Без периода показывается статистика за всё время.",
             )
         )
 
     @classmethod
-    def overall(cls, statistics: GenerationStatistics) -> str:
-        return cls._render(statistics, scope="все генерации")
+    def overall(
+        cls,
+        statistics: GenerationStatistics,
+        *,
+        period_label: str | None = None,
+    ) -> str:
+        return cls._render(
+            statistics,
+            scope="все генерации",
+            period_label=period_label,
+        )
 
     @classmethod
     def for_user(
         cls,
         statistics: GenerationStatistics,
         telegram_user_id: int,
+        *,
+        period_label: str | None = None,
     ) -> str:
         return cls._render(
             statistics,
             scope=f"пользователь {telegram_user_id}",
+            period_label=period_label,
         )
 
     @classmethod
@@ -44,10 +58,13 @@ class GenerationStatisticsMessages:
         cls,
         statistics: GenerationStatistics,
         telegram_chat_id: int,
+        *,
+        period_label: str | None = None,
     ) -> str:
         return cls._render(
             statistics,
             scope=f"чат {telegram_chat_id}",
+            period_label=period_label,
         )
 
     @staticmethod
@@ -63,11 +80,13 @@ class GenerationStatisticsMessages:
         statistics: GenerationStatistics,
         *,
         scope: str,
+        period_label: str | None,
     ) -> str:
         return "\n".join(
             (
                 "Статистика генераций",
                 f"Область: {scope}",
+                f"Период: {period_label or 'всё время'}",
                 "",
                 f"Всего: {statistics.total}",
                 f"Успешно: {_count(statistics.by_status, GenerationStatus.success)}",

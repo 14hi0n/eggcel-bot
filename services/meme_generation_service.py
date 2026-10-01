@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -112,7 +113,12 @@ class MemeGenerationService:
             error_code=error_code,
         )
 
-    async def get_overall_statistics(self) -> GenerationStatistics:
+    async def get_overall_statistics(
+        self,
+        *,
+        start_at: datetime | None = None,
+        end_at: datetime | None = None,
+    ) -> GenerationStatistics:
         """Собирает стату по всем генерациям в базе,
         без фильтров по юзеру и чату.
 
@@ -120,11 +126,17 @@ class MemeGenerationService:
             GenerationStatistics: _description_
         """
         async with self._session_factory() as session:
-            return await MemeGenerationRepository(session).get_statistics()
+            return await MemeGenerationRepository(session).get_statistics(
+                start_at=start_at,
+                end_at=end_at,
+            )
 
     async def get_chat_statistics(
         self,
         telegram_chat_id: int,
+        *,
+        start_at: datetime | None = None,
+        end_at: datetime | None = None,
     ) -> GenerationStatistics:
         async with self._session_factory() as session:
             chat = await ChatRepository(session).get_by_chat_id(telegram_chat_id)
@@ -133,12 +145,17 @@ class MemeGenerationService:
                 raise GenerationChatNotFoundError(telegram_chat_id)
 
             return await MemeGenerationRepository(session).get_statistics(
-                chat_id=chat.id
+                chat_id=chat.id,
+                start_at=start_at,
+                end_at=end_at,
             )
 
     async def get_user_statistics(
         self,
         telegram_user_id: int,
+        *,
+        start_at: datetime | None = None,
+        end_at: datetime | None = None,
     ) -> GenerationStatistics:
         async with self._session_factory() as session:
             user = await UserRepository(session).get_by_telegram_id(telegram_user_id)
@@ -147,7 +164,9 @@ class MemeGenerationService:
                 raise GenerationUserNotFoundError(telegram_user_id)
 
             return await MemeGenerationRepository(session).get_statistics(
-                user_id=user.id
+                user_id=user.id,
+                start_at=start_at,
+                end_at=end_at,
             )
 
     async def _finish(
